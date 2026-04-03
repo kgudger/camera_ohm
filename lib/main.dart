@@ -55,12 +55,14 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 ElevatedButton(
                   onPressed: () {
-                    appState.toggleScreen(),
+//                    appState.toggleScreen(),
+                    print("Changed");
                   },
                   child: const Text('Toggle Screen'),
                 ),
                 SizedBox(width: 20),
-                Text: 'Select Resistor Values:',             
+                Text('Select Resistor Values:'
+                ),             
               ],
             ),
           ],
