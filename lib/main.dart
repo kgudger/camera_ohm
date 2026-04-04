@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:collection/collection.dart';
+
 
 void main() {
   runApp(const CamerOhmApp());
@@ -7,30 +10,26 @@ void main() {
 class CamerOhmApp extends StatelessWidget {
   const CamerOhmApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CamerOhm',
-      theme: ThemeData(
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
+    return ChangeNotifierProvider(
+      create: (context) => MyAppState(),
+      child: MaterialApp(
+        title: 'CamerOhm',
+        theme: ThemeData(
+          colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        ),
       home: const MyHomePage(title: 'CamerOhm Page'),
+      )
     );
   }
 }
 
+class MyAppState extends ChangeNotifier {
+}
+
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -39,35 +38,129 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          mainAxisAlignment: .center,
-          children: [
-            const Text('Welcome to CamerOhm!'),
-            Row(
-              mainAxisSize: MainAxisSize.min,
+    Widget colmn;
+    switch (_isExpanded) {
+      case true:
+        colmn = CameraPage();
+        break;
+      case false:
+        colmn = EnterPage() as Widget;
+        break;
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Scaffold(
+          body: Center(
+            child: Column(
+  //        mainAxisAlignment: .center,
               children: [
-                ElevatedButton(
-                  onPressed: () {
-//                    appState.toggleScreen(),
-                    print("Changed");
-                  },
-                  child: const Text('Toggle Screen'),
+                const Text('Welcome to CamerOhm!'),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                      child: const Text('Toggle Screen'),
+                    ),
+                    SizedBox(width: 20),
+                    Text('Select Resistor Values:'
+                    ),             
+                  ],
                 ),
-                SizedBox(width: 20),
-                Text('Select Resistor Values:'
-                ),             
-              ],
+                Expanded(
+                  child: Container(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: colmn,
+                  ),
+                )
+              ], // children
             ),
-          ],
-        ),
+          ), 
+        );
+      }, //builder
+    );
+  }
+}
+class CameraPage extends StatelessWidget {
+  const CameraPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Placeholder(),
+        ]
       ),
     );
   }
+}
+
+class EnterPage extends State {
+ // const EnterPage({super.key});
+  final TextEditingController colorController = TextEditingController();
+  ColorLabel? selectedColor = ColorLabel.black;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ListView(
+  //      mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+            DropdownMenu<ColorLabel>(
+              initialSelection: ColorLabel.black,
+              controller: colorController,
+                        // The default requestFocusOnTap value depends on the platform.
+                        // On mobile, it defaults to false, and on desktop, it defaults to true.
+                        // Setting this to true will trigger a focus request on the text field, and
+                        // the virtual keyboard will appear afterward.
+              requestFocusOnTap: true,
+              label: const Text('Color'),
+              onSelected: (ColorLabel? color) {
+                selectedColor = color;
+              },
+              dropdownMenuEntries: ColorLabel.entries,
+            ),
+            const SizedBox(width: 24),
+        ], // children
+      ),
+    );
+  }
+}
+
+typedef ColorEntry = DropdownMenuEntry<ColorLabel>;
+
+// DropdownMenuEntry labels and values for the dropdown menu.
+enum ColorLabel {
+  black('Black',  Colors.black),
+  brown('Brown',  Colors.brown),
+  red('Red', Colors.red),
+  orange('Orange', Colors.orange),
+  yellow('Yellow', Colors.yellow),
+  green('Green', Colors.green),
+  blue('Blue', Colors.blue),
+  pink('Violet', Colors.purple),
+  grey('Grey', Colors.grey),
+  white('White', Colors.white);
+
+  const ColorLabel(this.label, this.color);
+  final String label;
+  final Color color;
+
+  static final List<ColorEntry> entries = UnmodifiableListView<ColorEntry>(
+    values.map<ColorEntry>(
+      (ColorLabel color) => ColorEntry(
+        value: color,
+        label: color.label,
+        enabled: color.label != 'Indigo',
+        style: MenuItemButton.styleFrom(foregroundColor: color.color),
+      ),
+    ),
+  );
 }
