@@ -48,7 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
         colmn = CameraPage();
         break;
       case false:
-        colmn = EnterPage() as Widget;
+        colmn = EnterPage();
         break;
     }
 
@@ -102,8 +102,12 @@ class CameraPage extends StatelessWidget {
   }
 }
 
-class EnterPage extends State {
- // const EnterPage({super.key});
+class EnterPage extends StatefulWidget {
+  const EnterPage({super.key});
+  @override
+  State<EnterPage> createState() => _EnterPage();
+}
+class _EnterPage extends State<EnterPage> {
   final TextEditingController colorController = TextEditingController();
   ColorLabel? selectedColor = ColorLabel.black;
   
