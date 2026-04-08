@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
+import 'dart:math';
 
 
 void main() {
@@ -39,9 +40,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   bool _isExpanded = false;
-  final TextEditingController _myController = TextEditingController(text: 'Select Resistor Values:');
-
   @override
+
   Widget build(BuildContext context) {
     Widget colmn;
     switch (_isExpanded) {
@@ -69,9 +69,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: const Text('Toggle Screen'),
                     ),
                     SizedBox(width: 20),
-                    TextField(
-                      controller: _myController,
-                    )            
+                    Text('Select Resistor Values:'
+                    ),             
                   ],
                 ),
                 Expanded(
@@ -115,13 +114,11 @@ class _EnterPage extends State<EnterPage> {
   
   @override
   Widget build(BuildContext context) {
-    return Center(      
+    return Center(
       child: ListView(
-//      mainAxisAlignment: MainAxisAlignment.center,
-//        scrollDirection: Axis.horizontal,
-//        shrinkWrap: true,
-        children: 
-          <Widget>[
+  //      mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+//          <Widget>[
           Center(
             child: _buildDropdown("First Color", ColorLabel.black, (val) {
               setState(() => selectedColor[0] = val);
@@ -168,40 +165,14 @@ class _EnterPage extends State<EnterPage> {
               calculateR();
             }),
           ),          
-/*            const SizedBox(width: 24),
-            DropdownMenu<ColorLabel>(
-              initialSelection: ColorLabel.black,
-              controller: colorController,
-                      // The default requestFocusOnTap value depends on the platform.
-                      // On mobile, it defaults to false, and on desktop, it defaults to true.
-                      // Setting this to true will trigger a focus request on the text field, and
-                      // the virtual keyboard will appear afterward.
-              requestFocusOnTap: true,
-              label: const Text('Color'),
-              onSelected: (ColorLabel? color) {
-                selectedColor[0] = color;
-                setState(() => selectedColor[0] = color);
-              },
-              dropdownMenuEntries: ColorLabel.entries,
-            ),
-            const SizedBox(height:  24),
-            DropdownMenu<ColorLabel>(
-              initialSelection: ColorLabel.black,
-              controller: colorController,
-                      // The default requestFocusOnTap value depends on the platform.
-                      // On mobile, it defaults to false, and on desktop, it defaults to true.
-                      // Setting this to true will trigger a focus request on the text field, and
-                      // the virtual keyboard will appear afterward.
-              requestFocusOnTap: true,
-              label: const Text('Color'),
-              onSelected: (ColorLabel? color) {
-                setState(() {
-                  selectedColor[1] = color;
-                });
-              },
-              dropdownMenuEntries: ColorLabel.entries,
-            ), */
-        ]
+          const SizedBox(height: 20),  
+          ElevatedButton(
+            onPressed: () {
+              showAlertDialog(context);
+            },
+            child: const Text('Show Resistor Value'),
+          ),
+        ], // children
       ),
     );
   }
@@ -220,20 +191,54 @@ Widget _buildDropdown(String label, ColorLabel? currentVal, ValueChanged<ColorLa
     );
   }
 }
+dynamic showAlertDialog(BuildContext context) {
+  // set up the button
+  Widget okButton = TextButton(
+    child: Text("OK"),
+    onPressed: () {
+      Navigator.of(context).pop(); // dismiss dialog
+     },
+  );
+
+  // set up the AlertDialog
+  AlertDialog alert = AlertDialog(
+    title: Text("Resistor Value"),
+    content: Text("R = $reString ohms"),
+    actions: [
+      okButton,
+    ],
+  );
+
+  // show the dialog
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return alert;
+    },
+  );
+}
+
 List<ColorLabel?> selectedColor = [null, null, null, null, null, null];
+String reString = "0";
 
 void calculateR() {
-  double totalR = 0.0;
+double totalR = 0.0;
   if (selectedColor[0] != null) {
     ColorLabel? tempC = selectedColor[0];
     int newR = (tempC!.index) ;
     if ((newR != 0) && (newR <= 9) ) {
-      totalR = newR.toDouble();
-      print(totalR);
-      
+      if ((selectedColor[1]!.index != 0) && (selectedColor[1]!.index <= 9) ) {
+        totalR = selectedColor[1]!.index.toDouble();
+      }
+      totalR = newR.toDouble() * 10.0 + totalR;
+      if ((selectedColor[2]!.index != 0) && (selectedColor[2]!.index <= 9) ) {
+        totalR = totalR * pow(10,selectedColor[2]!.index);
+      }
+
     } else {
-      newR = 0 ;
+      totalR = 0 ;
     }
+    reString = totalR.toStringAsExponential();
   }
 }
 
@@ -241,7 +246,6 @@ typedef ColorEntry = DropdownMenuEntry<ColorLabel>;
 
 // DropdownMenuEntry labels and values for the dropdown menu.
 enum ColorLabel {
- 
   black('Black',  Colors.black),
   brown('Brown',  Colors.brown),
   red('Red', Colors.red),
@@ -249,16 +253,17 @@ enum ColorLabel {
   yellow('Yellow', Colors.yellow),
   green('Green', Colors.green),
   blue('Blue', Colors.blue),
-  violet('Violet', Colors.purple),
+  pink('Violet', Colors.purple),
   grey('Grey', Colors.grey),
   white('White', Colors.white),
   gold('Gold', Colors.amber),
   silver('Silver', Color.fromARGB(0xFF, 0xC0, 0xC0, 0xC0)),
   none('None', Color.fromARGB(0x00, 0x00, 0x00, 0x00));
-  
+
   const ColorLabel(this.label, this.color);
   final String label;
   final Color color;
+
   static final List<ColorEntry> entries = UnmodifiableListView<ColorEntry>(
     values.map<ColorEntry>(
       (ColorLabel color) => ColorEntry(
