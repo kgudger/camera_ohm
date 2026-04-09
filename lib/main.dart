@@ -203,7 +203,7 @@ dynamic showAlertDialog(BuildContext context) {
   // set up the AlertDialog
   AlertDialog alert = AlertDialog(
     title: Text("Resistor Value"),
-    content: Text("R = $reString ohms"),
+    content: Text(reString),
     actions: [
       okButton,
     ],
@@ -218,7 +218,7 @@ dynamic showAlertDialog(BuildContext context) {
   );
 }
 
-List<ColorLabel?> selectedColor = [null, null, null, null, null, null];
+List<ColorLabel?> selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
 String reString = "0";
 
 void calculateR() {
@@ -229,17 +229,26 @@ double totalR = 0.0;
     if ((newR != 0) && (newR <= 9) ) {
       if ((selectedColor[1]!.index != 0) && (selectedColor[1]!.index <= 9) ) {
         totalR = selectedColor[1]!.index.toDouble();
+      } else {
+        totalR = 0;
       }
       totalR = newR.toDouble() * 10.0 + totalR;
       if ((selectedColor[2]!.index != 0) && (selectedColor[2]!.index <= 9) ) {
         totalR = totalR * pow(10,selectedColor[2]!.index);
       }
-
+      } else {
+        totalR = 0;
+      }
     } else {
       totalR = 0 ;
     }
-    reString = totalR.toStringAsExponential();
-  }
+    if (totalR >0) {
+      reString = totalR.toStringAsExponential();
+      reString = "R = $reString ohms";
+    } else {
+      reString = "Error - Please enter appropriate colors";
+    }
+
 }
 
 typedef ColorEntry = DropdownMenuEntry<ColorLabel>;
