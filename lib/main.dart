@@ -213,6 +213,7 @@ dynamic showAlertDialog(BuildContext context) {
   showDialog(
     context: context,
     builder: (BuildContext context) {
+//      calculateR();
       return alert;
     },
   );
@@ -222,33 +223,49 @@ List<ColorLabel?> selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabe
 String reString = "0";
 
 void calculateR() {
-double totalR = 0.0;
-  if (selectedColor[0] != null) {
+  double totalR = 0.0;
     ColorLabel? tempC = selectedColor[0];
     int newR = (tempC!.index) ;
     if ((newR != 0) && (newR <= 9) ) {
-      if ((selectedColor[1]!.index != 0) && (selectedColor[1]!.index <= 9) ) {
+      if (selectedColor[1]!.index <= 9 ) {
         totalR = selectedColor[1]!.index.toDouble();
       } else {
         totalR = 0;
       }
       totalR = newR.toDouble() * 10.0 + totalR;
-      if ((selectedColor[2]!.index != 0) && (selectedColor[2]!.index <= 9) ) {
-        totalR = totalR * pow(10,selectedColor[2]!.index);
+      switch (selectedColor[2]!.index) {
+        case <= 9:
+          totalR = totalR * pow(10,selectedColor[2]!.index);
+        case 10:
+          totalR = totalR * pow(10,-1);
+        case 11:
+          totalR = totalR * pow(10,-2);
+        default:
+          totalR = 0.0;
       }
-      } else {
-        totalR = 0;
-      }
-    } else {
-      totalR = 0 ;
+    switch (totalR) {
+      case >= 1000000000 :
+        reString = "R = ${(totalR / 1000000000).toStringAsFixed(1)} G ohms";
+      case >= 1000000:
+        reString = "R = ${(totalR / 1000000).toStringAsFixed(1)} M ohms";
+      case >= 1000:
+        reString = "R = ${(totalR / 1000).toStringAsFixed(1)} K ohms";
+      default:
+        reString = "R = ${totalR.toStringAsFixed(2)} ohms";
     }
-    if (totalR >0) {
-      reString = totalR.toStringAsExponential();
-      reString = "R = $reString ohms";
+/*    if (totalR >0) {
+      if (totalR >= 1000000000) {
+        reString = "R = ${(totalR / 1000000000).toStringAsFixed(1)} G ohms";
+      } else if (totalR >= 1000000) {
+        reString = "R = ${(totalR / 1000000).toStringAsFixed(1)} M ohms";
+      } else if (totalR >= 1000) {
+        reString = "R = ${(totalR / 1000).toStringAsFixed(1)} K ohms";
+      } else {
+        reString = "R = ${totalR.toStringAsFixed(0)} ohms";
+      } */
     } else {
       reString = "Error - Please enter appropriate colors";
     }
-
 }
 
 typedef ColorEntry = DropdownMenuEntry<ColorLabel>;
