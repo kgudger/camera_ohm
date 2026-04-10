@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
-import 'dart:math';
-
+//import 'dart:math';
+import 'package:camera_ohm/function_files/calculate_r.dart';
+import 'package:camera/camera.dart';
 
 void main() {
-  runApp(const CamerOhmApp());
+runApp(const CamerOhmApp());
 }
 
 class CamerOhmApp extends StatelessWidget {
@@ -87,8 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
-class CameraPage extends StatelessWidget {
-  const CameraPage({super.key});
+class CameraPage extends StatefulWidget {/*/  const CameraPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +98,77 @@ class CameraPage extends StatelessWidget {
         children: [
           Placeholder(),
         ]
+      ),
+    );
+  }*/
+  const CameraPage({super.key});
+  @override
+  State<CameraPage> createState() => _CameraPage();
+}
+
+class _CameraPage extends State<CameraPage> {
+  CameraController? _controller;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupCamera();
+  }
+
+  Future<void> _setupCamera() async {
+    // 1. Get available cameras
+    final cameras = await availableCameras();
+    if (cameras.isEmpty) return;
+
+    // 2. Initialize controller with the first camera
+    _controller = CameraController(cameras[0], ResolutionPreset.medium);
+    await _controller!.initialize();
+
+    if (!mounted) return;
+    setState(() => _isInitialized = true);
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Camera in Column")),
+      body: Column(
+        children: [
+          // Other UI elements
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text("Live Camera Preview:", style: TextStyle(fontSize: 18)),
+          ),
+          
+          // Camera Preview inside the Column
+          Expanded(
+            child: _isInitialized
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: CameraPreview(_controller!),
+                    ),
+                  )
+                : Center(child: CircularProgressIndicator()),
+          ),
+
+          // Action buttons below the camera
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: ElevatedButton(
+              onPressed: () => print("Take Photo Logic"),
+              child: Text("Capture Image"),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -159,13 +230,13 @@ class _EnterPage extends State<EnterPage> {
           ),
           const SizedBox(height: 20),  
           // Menu 6
-          Center(
+  /*        Center(
             child: _buildDropdown("Temp Coef Color", ColorLabel.none, (val) {
               setState(() => selectedColor[5] = val);
               calculateR();
             }),
           ),          
-          const SizedBox(height: 20),  
+          const SizedBox(height: 20),  */
           ElevatedButton(
             onPressed: () {
               showAlertDialog(context);
@@ -176,7 +247,7 @@ class _EnterPage extends State<EnterPage> {
       ),
     );
   }
-Widget _buildDropdown(String label, ColorLabel? currentVal, ValueChanged<ColorLabel?> onChanged) {
+  Widget _buildDropdown(String label, ColorLabel? currentVal, ValueChanged<ColorLabel?> onChanged) {
     return DropdownMenu<ColorLabel>(
       label: Text(label),
       initialSelection: currentVal,
@@ -191,6 +262,7 @@ Widget _buildDropdown(String label, ColorLabel? currentVal, ValueChanged<ColorLa
     );
   }
 }
+
 dynamic showAlertDialog(BuildContext context) {
   // set up the button
   Widget okButton = TextButton(
@@ -220,53 +292,6 @@ dynamic showAlertDialog(BuildContext context) {
 }
 
 List<ColorLabel?> selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
-String reString = "0";
-
-void calculateR() {
-  double totalR = 0.0;
-    ColorLabel? tempC = selectedColor[0];
-    int newR = (tempC!.index) ;
-    if ((newR != 0) && (newR <= 9) ) {
-      if (selectedColor[1]!.index <= 9 ) {
-        totalR = selectedColor[1]!.index.toDouble();
-      } else {
-        totalR = 0;
-      }
-      totalR = newR.toDouble() * 10.0 + totalR;
-      switch (selectedColor[2]!.index) {
-        case <= 9:
-          totalR = totalR * pow(10,selectedColor[2]!.index);
-        case 10:
-          totalR = totalR * pow(10,-1);
-        case 11:
-          totalR = totalR * pow(10,-2);
-        default:
-          totalR = 0.0;
-      }
-    switch (totalR) {
-      case >= 1000000000 :
-        reString = "R = ${(totalR / 1000000000).toStringAsFixed(1)} G ohms";
-      case >= 1000000:
-        reString = "R = ${(totalR / 1000000).toStringAsFixed(1)} M ohms";
-      case >= 1000:
-        reString = "R = ${(totalR / 1000).toStringAsFixed(1)} K ohms";
-      default:
-        reString = "R = ${totalR.toStringAsFixed(2)} ohms";
-    }
-/*    if (totalR >0) {
-      if (totalR >= 1000000000) {
-        reString = "R = ${(totalR / 1000000000).toStringAsFixed(1)} G ohms";
-      } else if (totalR >= 1000000) {
-        reString = "R = ${(totalR / 1000000).toStringAsFixed(1)} M ohms";
-      } else if (totalR >= 1000) {
-        reString = "R = ${(totalR / 1000).toStringAsFixed(1)} K ohms";
-      } else {
-        reString = "R = ${totalR.toStringAsFixed(0)} ohms";
-      } */
-    } else {
-      reString = "Error - Please enter appropriate colors";
-    }
-}
 
 typedef ColorEntry = DropdownMenuEntry<ColorLabel>;
 
@@ -284,7 +309,7 @@ enum ColorLabel {
   white('White', Colors.white),
   gold('Gold', Colors.amber),
   silver('Silver', Color.fromARGB(0xFF, 0xC0, 0xC0, 0xC0)),
-  none('None', Color.fromARGB(0x00, 0x00, 0x00, 0x00));
+  none('None', Colors.black);
 
   const ColorLabel(this.label, this.color);
   final String label;

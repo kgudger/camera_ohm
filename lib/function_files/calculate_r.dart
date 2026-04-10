@@ -1,0 +1,64 @@
+import 'package:camera_ohm/main.dart';
+import 'dart:math';
+
+String reString = "0";
+
+void calculateR() {
+  double totalR = 0.0;
+    ColorLabel? tempC = selectedColor[0];
+    int newR = (tempC!.index) ;
+    if ((newR != 0) && (newR <= 9) ) {
+      if (selectedColor[1]!.index <= 9 ) {
+        totalR = selectedColor[1]!.index.toDouble();
+      } else {
+        totalR = 0;
+      }
+      totalR = newR.toDouble() * 10.0 + totalR;
+      int newMult = selectedColor[2]!.index;
+      if (selectedColor[3]!.label != 'None') {
+        totalR = 10*totalR + selectedColor[2]!.index ;
+        newMult = selectedColor[3]!.index;
+      }
+      switch (newMult) {
+        case <= 9:
+          totalR = totalR * pow(10,selectedColor[2]!.index);
+        case 10:
+          totalR = totalR * pow(10,-1);
+        case 11:
+          totalR = totalR * pow(10,-2);
+        default:
+          totalR = 0.0;
+      }
+    switch (totalR) {
+      case >= 1000000000 :
+        reString = "R = ${(totalR / 1000000000).toStringAsFixed(1)} G ohms";
+      case >= 1000000:
+        reString = "R = ${(totalR / 1000000).toStringAsFixed(1)} M ohms";
+      case >= 1000:
+        reString = "R = ${(totalR / 1000).toStringAsFixed(1)} K ohms";
+      default:
+        reString = "R = ${totalR.toStringAsFixed(2)} ohms";
+    }
+    String tol = "10%";
+    switch (selectedColor[4]!.label) {
+      case 'Brown':
+        tol = "1%";
+      case 'Red':
+        tol = "2%";
+      case 'Green':
+        tol = "0.5%";
+      case 'Blue':
+        tol = "0.25%";
+      case 'Grey':
+        tol = "0.05%";
+      case 'Gold':
+        tol = "5%";
+      default:
+        tol = "10%";
+    }
+    reString = reString + " " + tol; 
+  } else {
+    reString = "Error - Please enter appropriate colors";
+  }
+}
+
