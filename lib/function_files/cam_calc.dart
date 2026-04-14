@@ -3,6 +3,8 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:camera_ohm/main.dart';
 import 'dart:math';
+//import 'package:flex_color_picker/flex_color_picker.dart';
+
 //import 'package:opencv_dart/opencv.dart' as cv;
 //import 'package:camera_ohm/function_files/camera_page.dart';
 
@@ -63,10 +65,12 @@ Future<List<ColorLabel>> _analyzeImageForBands(img.Image image, XFile capturedIm
   
   // Example dummy return representing a 4-band resistor: 
   // [Brown, Black, Red, Gold] -> 1k Ohm
+  final List<ColorLabel> colorLabel = [];
   final List<img.Pixel> centerPixels = getCenterPixels(image);
-  int i = 0;
+  //int i = 0;
   Color oldColor = Colors.black;
-  for (var pixel in centerPixels) {
+  var indexOld = 0;
+  for (var (index, pixel) in centerPixels.indexed) {
     Color flutterColor = Color.fromARGB(
     pixel.a.toInt(), 
     pixel.r.toInt(), 
@@ -75,22 +79,28 @@ Future<List<ColorLabel>> _analyzeImageForBands(img.Image image, XFile capturedIm
     double distance = getColorDistance(oldColor, flutterColor);
 //    print("distance = $distance");
     if ( distance > 20 ) {
-//      print('Index: $i, distance = $distance, Value: $flutterColor');
-      Color cvalue = getClosestColor(flutterColor, candidates);
-      print('Value: $cvalue');
+      if ((index - 1) > indexOld) {
+        var halfIndex = ((index - indexOld) ~/ 2) + indexOld; // halfway between these 2
+        Color halfColor = Color.fromARGB(
+          centerPixels[halfIndex].a.toInt(), 
+          centerPixels[halfIndex].r.toInt(), 
+          centerPixels[halfIndex].g.toInt(), 
+          centerPixels[halfIndex].b.toInt());
+        indexOld = index;                
+        colorLabel.add(getClosestColor(halfColor, candidates));
+  //      print('Index: $halfIndex Value: $colorName');
+      } // don't do this if they're too close
     }
     oldColor = flutterColor;
-    i++;
   }
-//  print('Image width: ${image.width}');
-//  print('Image height: ${image.height}');
-  return [
+  return colorLabel;
+  /*[
     ColorLabel.brown,
     ColorLabel.black,
     ColorLabel.red,
     ColorLabel.none,
     ColorLabel.gold,
-  ];
+  ];*/
 }
 List<img.Pixel> getCenterPixels(img.Image photo) {
   // 640 / 2 = 320 (the center column)
@@ -114,11 +124,14 @@ double getColorDistance(Color c1, Color c2) {
     pow(c1.b * 255.0.round().clamp(0, 255) - c2.b * 255.0.round().clamp(0, 255), 2),
   ).toDouble();
 }
-Color getClosestColor(Color target, List<Color> candidates) {
-  Color closestColor = candidates.first;
+ColorLabel getClosestColor(Color target, List<Color> candidates) {
+//  Color closestColor = candidates.first;
   double minDistance = double.infinity;
+  int lindex = 0;
+  ColorLabel colorLabel;
 
-  for (var color in candidates) {
+//  for (var color in candidates) {
+for (final (index,  color) in candidates.indexed) {
     // Calculate squared Euclidean distance in RGB space
     // Using squared distance avoids expensive sqrt() calls for comparisons
     double distance = pow(target.r * 255.0.round().clamp(0, 255) - color.r * 255.0.round().clamp(0, 255), 2) +
@@ -127,12 +140,14 @@ Color getClosestColor(Color target, List<Color> candidates) {
 
     if (distance < minDistance) {
       minDistance = distance;
-      closestColor = color;
+//      closestColor = color;
+      lindex = index;
     }
   }
-  return closestColor;
+  colorLabel = ColorLabel.values[lindex];
+  return colorLabel;
 }
-
+/*
 List<Color> candidates = [
   Colors.black,
   Colors.brown,
@@ -146,5 +161,5 @@ List<Color> candidates = [
   Colors.white,
   Colors.amber,
   Color.fromARGB(0xFF, 0xC0, 0xC0, 0xC0)
-];
- 
+];*/
+List<Color> candidates = ColorLabel.values.map((e) => e.color).toList(); 

@@ -19,7 +19,7 @@ class _CameraPage extends State<CameraPage> {
     super.initState();
     _setupCamera();
   }
-
+  
   Future<void> _setupCamera() async {
     // 1. Get available cameras
     final cameras = await availableCameras();
@@ -60,16 +60,19 @@ class _CameraPage extends State<CameraPage> {
                           // where the image file is saved.
                             final image = await _controller?.takePicture();
                               selectedColor = await getResistorColors(image!);
-                              calculateR();                           
-                            print('Image captured at: ${image.path}');
+                              calculateR();
+                              StatusService.instance.updateText(" $reString");                          
+//                            print('Image captured at: ${image.path}');
                           } catch (e) {
                           // If an error occurs, log the error to the console.
-                            print(e);
+//                            print(e);
                           }
                     }
+                    
                   }, child: Text('Calculate R'),
-                ),
-            ),
+                  
+          ),
+      ),
 //            SizedBox(width: 20),
           Stack(
             alignment: Alignment.center,
@@ -110,7 +113,24 @@ class _CameraPage extends State<CameraPage> {
       child: Stack(
         children: [
           // 1. The Outline Text (Stroke)
-          Center(child: Text(
+          Center(
+            child: ValueListenableBuilder<String>(
+              valueListenable: StatusService.instance.sharedText,
+              builder: (context, currentString, child) {
+                return Text(
+                  currentString,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    foreground: Paint()
+                      ..style = PaintingStyle.stroke
+                      ..strokeWidth = 2
+                      ..color = Colors.black, // Outline Color
+                  ),
+                );
+              },
+            ),
+/*child: Text(
             ' $reString ',
             style: TextStyle(
               fontSize: 24,
@@ -120,16 +140,21 @@ class _CameraPage extends State<CameraPage> {
                 ..strokeWidth = 2
                 ..color = Colors.black, // Outline Color
               ),
-            ),
+            ),*/
           ),
           // 2. The Main Text (Filled)
-          Center( child: Text(
-            ' $reString ',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white, // Fill Color
-              ),
+          Center( child: ValueListenableBuilder<String>(
+              valueListenable: StatusService.instance.sharedText,
+              builder: (context, currentString, child) {
+                return Text(
+                  currentString,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // Fill Color
+                  ),
+                );
+              },
             ),
           ),
         ],

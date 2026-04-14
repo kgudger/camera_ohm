@@ -10,10 +10,12 @@ class EnterPage extends StatefulWidget {
 class _EnterPage extends State<EnterPage> {
   final TextEditingController colorController = TextEditingController();
   ColorLabel? val ;
-  
+//  selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
+
   @override
   Widget build(BuildContext context) {
-    return Center(
+  selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
+  return Center(
       child: ListView(
   //      mainAxisAlignment: MainAxisAlignment.center,
         children: [

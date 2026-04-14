@@ -171,3 +171,17 @@ enum ColorLabel {
     ),
   );
 }
+
+class StatusService {
+  // Singleton setup
+  StatusService._internal();
+  static final StatusService instance = StatusService._internal();
+
+  // The actual notifier holding the String
+  final ValueNotifier<String> sharedText = ValueNotifier<String>("Click Calculate...");
+
+  // Helper method to update the value
+  void updateText(String newValue) {
+    sharedText.value = newValue;
+  }
+}
