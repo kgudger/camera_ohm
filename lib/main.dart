@@ -137,6 +137,7 @@ dynamic showAlertDialog(BuildContext context) {
 }
 
 List<ColorLabel?> selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
+final List<ColorLabel?> defaultColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
 
 typedef ColorEntry = DropdownMenuEntry<ColorLabel>;
 

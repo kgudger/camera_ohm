@@ -3,6 +3,8 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:camera_ohm/main.dart';
 import 'dart:math';
+import 'package:logger/logger.dart';
+
 //import 'package:flex_color_picker/flex_color_picker.dart';
 
 //import 'package:opencv_dart/opencv.dart' as cv;
@@ -18,8 +20,14 @@ Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
   // In a real app, you would pass 'decodedImage' to a TFLite model here.
   // The model would return bounding boxes for the bands.
   List<ColorLabel> detectedBands = await _analyzeImageForBands(decodedImage,capturedImage);
-
-  return detectedBands;
+  List<ColorLabel> returnedBands = detectedBands.asMap().entries
+    .where((entry) => entry.key % 2 != 0)
+    .map((entry) => entry.value)
+    .take(6)
+    .toList();
+  var logger = Logger();
+  logger.d(returnedBands); // Prints a pretty-formatted list
+  return returnedBands;
 }
 
 Future<List<ColorLabel>> _analyzeImageForBands(img.Image image, XFile capturedImage) async {
@@ -147,19 +155,5 @@ for (final (index,  color) in candidates.indexed) {
   colorLabel = ColorLabel.values[lindex];
   return colorLabel;
 }
-/*
-List<Color> candidates = [
-  Colors.black,
-  Colors.brown,
-  Colors.red,
-  Colors.orange,
-  Colors.yellow,
-  Colors.green,
-  Colors.blue,
-  Colors.purple,
-  Colors.grey,
-  Colors.white,
-  Colors.amber,
-  Color.fromARGB(0xFF, 0xC0, 0xC0, 0xC0)
-];*/
+
 List<Color> candidates = ColorLabel.values.map((e) => e.color).toList(); 

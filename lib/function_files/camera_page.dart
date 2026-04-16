@@ -28,20 +28,21 @@ class _CameraPage extends State<CameraPage> {
     // 2. Initialize controller with the first camera
     _controller = CameraController(cameras[0], ResolutionPreset.medium);
     await _controller!.initialize();
-    await _controller!.setFlashMode(FlashMode.torch);
+    await _controller!.setFlashMode(FlashMode.auto); // was torch
 
     if (!mounted) return;
     setState(() => _isInitialized = true);
   }
-
+  
   @override
   void dispose() {
     _controller?.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
+    selectedColor = List.from(defaultColor);
+    reString = "Click to get R";
     return Scaffold(
 //      appBar: AppBar(title: Text("Camera in Column")),
       body: Column(
