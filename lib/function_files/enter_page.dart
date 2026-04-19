@@ -11,10 +11,16 @@ class _EnterPage extends State<EnterPage> {
   final TextEditingController colorController = TextEditingController();
   ColorLabel? val ;
 //  selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
+  @override
+  void initState() {
+    super.initState();
+    // Use 'widget.' to access properties from the StatefulWidget class
+    selectedColor = List.from(defaultColor); 
+  }
 
   @override
   Widget build(BuildContext context) {
-  selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
+  //  reString = "Click to get R";
   return Center(
       child: ListView(
   //      mainAxisAlignment: MainAxisAlignment.center,

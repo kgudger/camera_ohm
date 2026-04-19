@@ -48,6 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget build(BuildContext context) {
     Widget colmn;
+  //  selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
     switch (_isExpanded) {
       case true:
         colmn = CameraPage();
@@ -82,6 +83,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           } else {
                             _buttonText = "Camera Mode";
                           }
+                          selectedColor = List.from(defaultColor);
+                          reString = "Click to get R";
                         });
                       },
 
@@ -179,7 +182,7 @@ class StatusService {
   static final StatusService instance = StatusService._internal();
 
   // The actual notifier holding the String
-  final ValueNotifier<String> sharedText = ValueNotifier<String>("Click Calculate...");
+  final ValueNotifier<String> sharedText = ValueNotifier<String>(" $reString");
 
   // Helper method to update the value
   void updateText(String newValue) {

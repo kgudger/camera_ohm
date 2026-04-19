@@ -4,16 +4,17 @@ import 'dart:math';
 String reString = "Select Colors";
 
 void calculateR() {
+  String defaultString = "Inappropriate colors";
   double totalR = 0.0;
   ColorLabel? tempC = selectedColor[0];
   int newR = (tempC!.index) ;
   if (newR == 0 || newR > 9 || selectedColor[1]!.index > 9 ) {
-    reString = "Please enter appropriate colors";
+    reString = defaultString;
     return;
   }
   int newMult = selectedColor[2]!.index;
   if (newMult > 9) {
-    reString = "Please enter appropriate colors";
+    reString = defaultString;
     return;
   }
   totalR = selectedColor[1]!.index.toDouble();
@@ -32,7 +33,7 @@ void calculateR() {
     case 11:
         totalR = totalR * pow(10,-2);
     default:
-      reString = "Please enter appropriate colors";
+      reString = defaultString;
   } 
   switch (totalR) {
     case >= 1000000000 :

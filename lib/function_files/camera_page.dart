@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_ohm/main.dart';
 import 'package:camera_ohm/function_files/cam_calc.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:logger/logger.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -13,15 +16,19 @@ class CameraPage extends StatefulWidget {
 class _CameraPage extends State<CameraPage> {
   CameraController? _controller;
   bool _isInitialized = false;
+  var logger = Logger();
 
   @override
   void initState() {
     super.initState();
     _setupCamera();
+  //  selectedColor = List.from(defaultColor);
+  //  reString = "Calculate R";
   }
   
   Future<void> _setupCamera() async {
     // 1. Get available cameras
+    
     final cameras = await availableCameras();
     if (cameras.isEmpty) return;
 
@@ -41,8 +48,9 @@ class _CameraPage extends State<CameraPage> {
   }
   @override
   Widget build(BuildContext context) {
-    selectedColor = List.from(defaultColor);
-    reString = "Click to get R";
+  //  selectedColor = List.from(defaultColor);
+//    reString = "Click to get R";
+    StatusService.instance.updateText(reString);
     return Scaffold(
 //      appBar: AppBar(title: Text("Camera in Column")),
       body: Column(
@@ -60,6 +68,19 @@ class _CameraPage extends State<CameraPage> {
                           // Attempt to take a picture and then get the location
                           // where the image file is saved.
                             final image = await _controller?.takePicture();
+                            // Get external storage directory
+                            //final directory = await getExternalStorageDirectory();
+                            if (image != null) {
+                              final directory = await getApplicationDocumentsDirectory();
+                              final File localImage = await File(image.path).copy('${directory.path}/captured_image.png');
+                              logger.d(directory.path);
+//                              print('Saved to: $(directory.path)');
+                            }
+/*                            final directory = Directory('/mnt/chromeos/MyFiles/Downloads');
+                            // Create a new file path
+                            final String newPath = '${directory!.path}/image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                            // Move the file
+                            final File newImage = await File(image!.path).copy(newPath);*/
                               selectedColor = await getResistorColors(image!);
                               calculateR();
                               StatusService.instance.updateText(" $reString");                          

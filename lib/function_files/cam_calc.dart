@@ -11,6 +11,10 @@ import 'package:logger/logger.dart';
 //import 'package:camera_ohm/function_files/camera_page.dart';
 
 Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
+  var logger = Logger();
+
+  logger.d(capturedImage.path);
+
   // 1. Load the image bytes
   final bytes = await capturedImage.readAsBytes();
   final img.Image? decodedImage = img.decodeImage(bytes);
@@ -25,7 +29,7 @@ Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
     .map((entry) => entry.value)
     .take(6)
     .toList();
-  var logger = Logger();
+
   logger.d(returnedBands); // Prints a pretty-formatted list
   return returnedBands;
 }
@@ -78,26 +82,46 @@ Future<List<ColorLabel>> _analyzeImageForBands(img.Image image, XFile capturedIm
   //int i = 0;
   Color oldColor = Colors.black;
   var indexOld = 0;
+  List<int> listR = [];
+  List<int> listG = [];
+  List<int> listB = [];
+  int pixelr;
+  int pixelg;
+  int pixelb;
+
   for (var (index, pixel) in centerPixels.indexed) {
+    pixelr = pixel.r.toInt();
+    pixelg = pixel.g.toInt();
+    pixelb = pixel.b.toInt();
+  
+    listR.add(pixelr);
+    listB.add(pixelb);
+    listG.add(pixelg);
+
     Color flutterColor = Color.fromARGB(
     pixel.a.toInt(), 
-    pixel.r.toInt(), 
-    pixel.g.toInt(), 
-    pixel.b.toInt());
+    pixelr, 
+    pixelg, 
+    pixelb);
+
     double distance = getColorDistance(oldColor, flutterColor);
 //    print("distance = $distance");
     if ( distance > 20 ) {
-      if ((index - 1) > indexOld) {
-        var halfIndex = ((index - indexOld) ~/ 2) + indexOld; // halfway between these 2
-        Color halfColor = Color.fromARGB(
-          centerPixels[halfIndex].a.toInt(), 
-          centerPixels[halfIndex].r.toInt(), 
-          centerPixels[halfIndex].g.toInt(), 
-          centerPixels[halfIndex].b.toInt());
+      if ((index - 2) > indexOld) {
+        pixelr = calculateMedian(listR);
+        pixelg = calculateMedian(listG);
+        pixelb = calculateMedian(listB);
+        Color medianColor = Color.fromARGB(
+          255, 
+          pixelr, 
+          pixelg, 
+          pixelb);
         indexOld = index;                
-        colorLabel.add(getClosestColor(halfColor, candidates));
-  //      print('Index: $halfIndex Value: $colorName');
-      } // don't do this if they're too close
+        colorLabel.add(getClosestColor(medianColor, candidates));
+        listR.clear();
+        listB.clear();
+        listG.clear();
+      }  // don't do this if they're too close
     }
     oldColor = flutterColor;
   }
@@ -139,7 +163,7 @@ ColorLabel getClosestColor(Color target, List<Color> candidates) {
   ColorLabel colorLabel;
 
 //  for (var color in candidates) {
-for (final (index,  color) in candidates.indexed) {
+  for (final (index,  color) in candidates.indexed) {
     // Calculate squared Euclidean distance in RGB space
     // Using squared distance avoids expensive sqrt() calls for comparisons
     double distance = pow(target.r * 255.0.round().clamp(0, 255) - color.r * 255.0.round().clamp(0, 255), 2) +
@@ -156,4 +180,24 @@ for (final (index,  color) in candidates.indexed) {
   return colorLabel;
 }
 
+int calculateMedian(List<int> list) {
+
+  if (list.isEmpty) return 0;
+
+  // 2. Sort the sublist (required for median)
+  list.sort();
+
+  int middle = list.length ~/ 2;
+
+  // 3. Apply median logic
+  if (list.length % 2 == 1) {
+    // Odd length: return the middle element
+    return list[middle];
+  } else {
+    // Even length: return average of the two middle elements
+    return (list[middle - 1] + list[middle]) ~/ 2;
+  }
+}
+
 List<Color> candidates = ColorLabel.values.map((e) => e.color).toList(); 
+
