@@ -144,6 +144,7 @@ List<img.Pixel> getCenterPixels(img.Image photo) {
 
   for (int y = ytop; y < ybottom; y++) {
     // Grabs the pixel at the center X coordinate for every Y row
+    print(photo.getPixel(centerX, y));
     columnPixels.add(photo.getPixel(centerX, y));
   }
   return columnPixels;

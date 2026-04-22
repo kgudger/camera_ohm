@@ -36,7 +36,19 @@ class _CameraPage extends State<CameraPage> {
     _controller = CameraController(cameras[0], ResolutionPreset.medium);
     await _controller!.initialize();
     await _controller!.setFlashMode(FlashMode.auto); // was torch
+    // 1. Get the min/max bounds (crucial to avoid crashes)
+    double minExposure = await _controller!.getMinExposureOffset();
+    double maxExposure = await _controller!.getMaxExposureOffset();
 
+    // 2. Set a value within those bounds to brighten the image
+    // A value of 1.0 or 2.0 is usually significantly brighter
+    double brightnessValue = 1.0; 
+
+    if (brightnessValue <= maxExposure && brightnessValue >= minExposure) {
+      await _controller!.setExposureOffset(brightnessValue);
+        if (!mounted) return;
+//        setState(() => _isInitialized = true);
+    }
     if (!mounted) return;
     setState(() => _isInitialized = true);
   }
@@ -71,16 +83,12 @@ class _CameraPage extends State<CameraPage> {
                             // Get external storage directory
                             //final directory = await getExternalStorageDirectory();
                             if (image != null) {
-                              final directory = await getApplicationDocumentsDirectory();
+                              final directory = Directory('/storage/emulated/0/Download');
+//                              final directory = await getApplicationDocumentsDirectory();
                               final File localImage = await File(image.path).copy('${directory.path}/captured_image.png');
-                              logger.d(directory.path);
-//                              print('Saved to: $(directory.path)');
+//                              logger.d(directory.path); 
+//                              if (context.mounted) DialogHelper.showAlertDialog(context, directory.path);
                             }
-/*                            final directory = Directory('/mnt/chromeos/MyFiles/Downloads');
-                            // Create a new file path
-                            final String newPath = '${directory!.path}/image_${DateTime.now().millisecondsSinceEpoch}.jpg';
-                            // Move the file
-                            final File newImage = await File(image!.path).copy(newPath);*/
                               selectedColor = await getResistorColors(image!);
                               calculateR();
                               StatusService.instance.updateText(" $reString");                          

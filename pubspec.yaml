@@ -46,6 +46,8 @@ dependencies:
   flutter_launcher_icons: ^0.14.4
   flex_color_picker: ^3.8.0
   logger: ^2.7.0
+  permission_handler: ^12.0.1
+  camerawesome: ^2.5.0
 
 dev_dependencies:
   flutter_test:

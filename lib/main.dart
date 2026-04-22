@@ -111,32 +111,34 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-dynamic showAlertDialog(BuildContext context) {
+class DialogHelper {
+  static dynamic showAlertDialog(BuildContext context, String message) {  
   // set up the button
-  Widget okButton = TextButton(
-    child: Text("OK"),
-    onPressed: () {
-      Navigator.of(context).pop(); // dismiss dialog
-     },
-  );
+    Widget okButton = TextButton(
+      child: Text("OK"),
+      onPressed: () {
+        Navigator.of(context).pop(); // dismiss dialog
+      },
+    );
 
-  // set up the AlertDialog
-  AlertDialog alert = AlertDialog(
-    title: Text("Resistor Value"),
-    content: Text(reString),
-    actions: [
-      okButton,
-    ],
-  );
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text("Debug Info"),
+      content: Text(message),
+      actions: [
+        okButton,
+      ],
+    );
 
-  // show the dialog
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-//      calculateR();
-      return alert;
-    },
-  );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+  //      calculateR();
+        return alert;
+      },
+    );
+  }
 }
 
 List<ColorLabel?> selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
