@@ -7,7 +7,8 @@ import 'package:camera_ohm/function_files/enter_page.dart';
 import 'package:camera_ohm/function_files/camera_page.dart';
 
 void main() {
-runApp(const CamerOhmApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const CamerOhmApp());
 }
 
 class CamerOhmApp extends StatelessWidget {

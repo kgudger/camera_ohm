@@ -10,13 +10,13 @@ import 'package:logger/logger.dart';
 //import 'package:opencv_dart/opencv.dart' as cv;
 //import 'package:camera_ohm/function_files/camera_page.dart';
 
-Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
+Future<List<ColorLabel?>> getResistorColors(XFile? capturedImage ) async {
   var logger = Logger();
 
-  logger.d(capturedImage.path);
+  logger.d(capturedImage?.path);
 
   // 1. Load the image bytes
-  final bytes = await capturedImage.readAsBytes();
+  final bytes = await capturedImage!.readAsBytes();
   final img.Image? decodedImage = img.decodeImage(bytes);
   if (decodedImage == null) return [ColorLabel.none];
 

@@ -1,11 +1,14 @@
 import 'package:camera_ohm/function_files/calculate_r.dart';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
+//import 'package:camera/camera.dart';
+import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camera_ohm/main.dart';
 import 'package:camera_ohm/function_files/cam_calc.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'dart:io';
 import 'package:logger/logger.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -14,57 +17,72 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPage extends State<CameraPage> {
-  CameraController? _controller;
   bool _isInitialized = false;
   var logger = Logger();
+  final String _processedText = "No image processed yet";
 
+  // 1. Your custom function to process the image
+/*  Future<void> _getResistorColors(String filePath) async {
+    setState(() {
+      _processedText = "Processing...";
+    });
+
+    // Simulate some logic (like OCR or AI analysis)
+    await Future.delayed(const Duration(seconds: 2));
+    
+    // In a real app, you might use Google ML Kit or an API call here
+    setState(() {
+      _processedText = "Processed File: ${p.basename(filePath)}\nStatus: Success";
+      
+    });
+  }
+*/
   @override
   void initState() {
     super.initState();
-    _setupCamera();
+    _checkPermissions();
+    _init();
+  //  _setupCamera();
   //  selectedColor = List.from(defaultColor);
   //  reString = "Calculate R";
   }
-  
-  Future<void> _setupCamera() async {
-    // 1. Get available cameras
-    
-    final cameras = await availableCameras();
-    if (cameras.isEmpty) return;
-
-    // 2. Initialize controller with the first camera
-    _controller = CameraController(cameras[0], ResolutionPreset.medium);
-    await _controller!.initialize();
-    await _controller!.setFlashMode(FlashMode.auto); // was torch
-    // 1. Get the min/max bounds (crucial to avoid crashes)
-    double minExposure = await _controller!.getMinExposureOffset();
-    double maxExposure = await _controller!.getMaxExposureOffset();
-
-    // 2. Set a value within those bounds to brighten the image
-    // A value of 1.0 or 2.0 is usually significantly brighter
-    double brightnessValue = 1.0; 
-
-    if (brightnessValue <= maxExposure && brightnessValue >= minExposure) {
-      await _controller!.setExposureOffset(brightnessValue);
-        if (!mounted) return;
-//        setState(() => _isInitialized = true);
+  Future<void> _init() async {
+    final status = await Permission.camera.request();
+    if (status.isGranted) {
+      setState(() => _isInitialized = true);
     }
-    if (!mounted) return;
-    setState(() => _isInitialized = true);
   }
-  
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
+  Future<void> _checkPermissions() async {
+  final status = await Permission.camera.request();
+  if (!status.isGranted) {
+    // Handle denied permission
+    debugPrint("Camera permission not granted");
   }
+}
   @override
   Widget build(BuildContext context) {
-  //  selectedColor = List.from(defaultColor);
-//    reString = "Click to get R";
     StatusService.instance.updateText(reString);
     return Scaffold(
-//      appBar: AppBar(title: Text("Camera in Column")),
+  /*    body: CameraAwesomeBuilder.awesome(
+        sensorConfig: SensorConfig.single(
+        sensor: Sensor.position(SensorPosition.back),
+        ),
+                    saveConfig: SaveConfig.photoAndVideo(
+                      initialCaptureMode: CaptureMode.photo,
+                      photoPathBuilder: (sensors) async {
+                        final Directory extDir = await getTemporaryDirectory();
+                        final testDir = await Directory(p.join(extDir.path, 'camerawesome')).create(recursive: true);
+                        return SingleCaptureRequest(
+                          p.join(
+                            testDir.path,
+                            '${DateTime.now().millisecondsSinceEpoch}.jpg',
+                          ),
+                          sensors.first,
+                        );
+                      },
+                    ),
+      ),
+    )*/  
       body: Column(
         children: [
           // Other UI elements
@@ -72,125 +90,120 @@ class _CameraPage extends State<CameraPage> {
 /*            padding: const EdgeInsets.all(16.0),
             child: Text("Live Camera Preview:", style: TextStyle(fontSize: 18)),*/
               padding: const EdgeInsets.only(bottom: 20, left: 16, right: 16),//all(20.0),
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (_isInitialized) {
-                          try {
-                          // Ensure that the camera is initialized.
-                          // Attempt to take a picture and then get the location
-                          // where the image file is saved.
-                            final image = await _controller?.takePicture();
-                            // Get external storage directory
-                            //final directory = await getExternalStorageDirectory();
-                            if (image != null) {
-                              final directory = Directory('/storage/emulated/0/Download');
-//                              final directory = await getApplicationDocumentsDirectory();
-                              final File localImage = await File(image.path).copy('${directory.path}/captured_image.png');
-//                              logger.d(directory.path); 
-//                              if (context.mounted) DialogHelper.showAlertDialog(context, directory.path);
-                            }
-                              selectedColor = await getResistorColors(image!);
-                              calculateR();
-                              StatusService.instance.updateText(" $reString");                          
-//                            print('Image captured at: ${image.path}');
-                          } catch (e) {
-                          // If an error occurs, log the error to the console.
-//                            print(e);
-                          }
-                    }
-                    
-                  }, child: Text('Calculate R'),
-                  
+                child: Text(
+              _processedText,
+              style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
           ),
-      ),
 //            SizedBox(width: 20),
-          Stack(
-            alignment: Alignment.center,
-            children: [
+          Expanded(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
             // Layer 1: The Live Camera Feed
-              Expanded(
-                child: _isInitialized
-                  ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: CameraPreview(_controller!),
+                Positioned.fill( // suggested by ChatGPT
+                  child: /*!_isInitialized
+              ? const Center(child: CircularProgressIndicator())
+              :*/ CameraAwesomeBuilder.awesome(
+                    sensorConfig: SensorConfig.single(
+                      sensor: Sensor.position(SensorPosition.back),
+                      aspectRatio: CameraAspectRatios.ratio_16_9,
                     ),
-                  )
-                : Center(child: CircularProgressIndicator()),
-              ),
-            // Layer 2: The Overlay Box
-              Container(
-                width: 100,
-                height: 300,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Colors.red, 
-                    width: 3.0,
+  //                  customPreview: (preview) => preview,
+              // 2. Listen for the capture event
+                    saveConfig: SaveConfig.photoAndVideo(
+                      initialCaptureMode: CaptureMode.photo,
+                      photoPathBuilder: (sensors) async {
+                        final Directory extDir = await getTemporaryDirectory();
+                        final testDir = await Directory(p.join(extDir.path, 'camerawesome')).create(recursive: true);
+                        return SingleCaptureRequest(
+                          p.join(
+                            testDir.path,
+                            '${DateTime.now().millisecondsSinceEpoch}.jpg',
+                          ),
+                          sensors.first,
+                        );
+                      },
+                    ),
+            onMediaCaptureEvent: (event) {
+                      if (event.status == MediaCaptureStatus.success && 
+                          event.isPicture) {
+                  // Retrieve the file path from the capture request
+                        event.captureRequest.when(
+                          single: (single) async {
+                            final capturedImage = single.file;
+                            if (capturedImage != null) {
+                              getResistorColors(capturedImage);
+                            }
+                          }
+                        );
+                      }
+                    },
+                    previewFit: CameraPreviewFit.cover,
                   ),
-                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-              Container(
-                width: 3,
-                height: 400,
-                color: Colors.purple,
-              ),
-              Positioned(
-                top: 10, // Distance from the top
-                left: 0,
-                right: 0,
-      child: Stack(
-        children: [
+                Container(
+                  width: 100,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.red, 
+                      width: 3.0,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                Container(
+                  width: 3,
+                  height: 400,
+                  color: Colors.purple,
+                ),
+                Positioned(
+                  top: 10, // Distance from the top
+                  left: 0,
+                  right: 0,
+                  child: Stack(
+                    children: [
           // 1. The Outline Text (Stroke)
-          Center(
-            child: ValueListenableBuilder<String>(
-              valueListenable: StatusService.instance.sharedText,
-              builder: (context, currentString, child) {
-                return Text(
-                  currentString,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    foreground: Paint()
-                      ..style = PaintingStyle.stroke
-                      ..strokeWidth = 2
-                      ..color = Colors.black, // Outline Color
-                  ),
-                );
-              },
-            ),
-/*child: Text(
-            ' $reString ',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              foreground: Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 2
-                ..color = Colors.black, // Outline Color
-              ),
-            ),*/
-          ),
+                      Center(
+                        child: ValueListenableBuilder<String>(
+                          valueListenable: StatusService.instance.sharedText,
+                          builder: (context, currentString, child) {
+                            return Text(
+                              currentString,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                foreground: Paint()
+                                ..style = PaintingStyle.stroke
+                                ..strokeWidth = 2
+                                ..color = Colors.black, // Outline Color
+                              ),
+                            );
+                          }, // builder
+                        ),
+                      ),
           // 2. The Main Text (Filled)
-          Center( child: ValueListenableBuilder<String>(
-              valueListenable: StatusService.instance.sharedText,
-              builder: (context, currentString, child) {
-                return Text(
-                  currentString,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // Fill Color
+                      Center( child: ValueListenableBuilder<String>(
+                        valueListenable: StatusService.instance.sharedText,
+                        builder: (context, currentString, child) {
+                          return Text(
+                            currentString,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white, // Fill Color
+                            ),
+                          );
+                        }, // builder
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-              )
-            ], // children
+                ),
+              ],
+            ), // children
           ),          
           // Action buttons below the camera
         ],
