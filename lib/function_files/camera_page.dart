@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camera_ohm/main.dart';
 import 'package:camera_ohm/function_files/cam_calc.dart';
-import 'package:path_provider/path_provider.dart';
+//import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'dart:io';
 import 'package:logger/logger.dart';
@@ -17,9 +17,9 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPage extends State<CameraPage> {
-  bool _isInitialized = false;
+//  bool _isInitialized = false;
   var logger = Logger();
-  final String _processedText = "No image processed yet";
+  String _processedText = "No image processed yet";
 
   // 1. Your custom function to process the image
 /*  Future<void> _getResistorColors(String filePath) async {
@@ -49,7 +49,7 @@ class _CameraPage extends State<CameraPage> {
   Future<void> _init() async {
     final status = await Permission.camera.request();
     if (status.isGranted) {
-      setState(() => _isInitialized = true);
+//      setState(() => _isInitialized = true);
     }
   }
   Future<void> _checkPermissions() async {
@@ -62,90 +62,76 @@ class _CameraPage extends State<CameraPage> {
   @override
   Widget build(BuildContext context) {
     StatusService.instance.updateText(reString);
-    return Scaffold(
-  /*    body: CameraAwesomeBuilder.awesome(
-        sensorConfig: SensorConfig.single(
-        sensor: Sensor.position(SensorPosition.back),
-        ),
-                    saveConfig: SaveConfig.photoAndVideo(
-                      initialCaptureMode: CaptureMode.photo,
-                      photoPathBuilder: (sensors) async {
-                        final Directory extDir = await getTemporaryDirectory();
-                        final testDir = await Directory(p.join(extDir.path, 'camerawesome')).create(recursive: true);
-                        return SingleCaptureRequest(
-                          p.join(
-                            testDir.path,
-                            '${DateTime.now().millisecondsSinceEpoch}.jpg',
-                          ),
-                          sensors.first,
-                        );
-                      },
-                    ),
-      ),
-    )*/  
+    return Scaffold(  
       body: Column(
         children: [
-          // Other UI elements
-          Padding(
-/*            padding: const EdgeInsets.all(16.0),
-            child: Text("Live Camera Preview:", style: TextStyle(fontSize: 18)),*/
-              padding: const EdgeInsets.only(bottom: 20, left: 16, right: 16),//all(20.0),
-                child: Text(
-              _processedText,
-              style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-          ),
-//            SizedBox(width: 20),
           Expanded(
             child: Stack(
               alignment: Alignment.center,
               children: [
             // Layer 1: The Live Camera Feed
-                Positioned.fill( // suggested by ChatGPT
-                  child: /*!_isInitialized
-              ? const Center(child: CircularProgressIndicator())
-              :*/ CameraAwesomeBuilder.awesome(
-                    sensorConfig: SensorConfig.single(
-                      sensor: Sensor.position(SensorPosition.back),
-                      aspectRatio: CameraAspectRatios.ratio_16_9,
-                    ),
-  //                  customPreview: (preview) => preview,
-              // 2. Listen for the capture event
-                    saveConfig: SaveConfig.photoAndVideo(
-                      initialCaptureMode: CaptureMode.photo,
-                      photoPathBuilder: (sensors) async {
-                        final Directory extDir = await getTemporaryDirectory();
-                        final testDir = await Directory(p.join(extDir.path, 'camerawesome')).create(recursive: true);
-                        return SingleCaptureRequest(
-                          p.join(
-                            testDir.path,
-                            '${DateTime.now().millisecondsSinceEpoch}.jpg',
-                          ),
-                          sensors.first,
-                        );
-                      },
-                    ),
-            onMediaCaptureEvent: (event) {
-                      if (event.status == MediaCaptureStatus.success && 
-                          event.isPicture) {
-                  // Retrieve the file path from the capture request
-                        event.captureRequest.when(
-                          single: (single) async {
-                            final capturedImage = single.file;
-                            if (capturedImage != null) {
-                              getResistorColors(capturedImage);
-                            }
-                          }
-                        );
-                      }
-                    },
-                    previewFit: CameraPreviewFit.cover,
+                SizedBox(
+                  width: double.infinity,
+                  child: 
+                  Center(
+                    child: AspectRatio(
+                      aspectRatio: 3 / 4,
+                      child: ClipRect
+                      ( // suggested by ChatGPT
+                        child: /*!_isInitialized
+                  ? const Center(child: CircularProgressIndicator())
+                      :*/ CameraAwesomeBuilder.awesome(
+                            sensorConfig: SensorConfig.single(
+                              sensor: Sensor.position(SensorPosition.front), // back for device, front for emulator
+                              aspectRatio: CameraAspectRatios.ratio_4_3,
+                            ),
+          //                  customPreview: (preview) => preview,
+                      // 2. Listen for the capture event
+                            saveConfig: SaveConfig.photoAndVideo(
+                              initialCaptureMode: CaptureMode.photo,
+                              photoPathBuilder: (sensors) async {
+//                                final Directory extDir = await getTemporaryDirectory();
+//                                final testDir = await Directory(p.join(extDir.path, 'camerawesome')).create(recursive: true);
+                                  final directory = Directory('/storage/emulated/0/Download/');
+
+                                return SingleCaptureRequest(
+                                  p.join(
+//                                    testDir.path,
+                                      directory.path,
+                                    '${DateTime.now().millisecondsSinceEpoch}.jpg',
+//                                      'captured_image.png',
+                                  ),
+                                  sensors.first,
+                                );
+                              },
+                            ),
+                            onMediaCaptureEvent: (event) {
+                              if (event.status == MediaCaptureStatus.success && 
+                                  event.isPicture) {
+                          // Retrieve the file path from the capture request
+                                event.captureRequest.when(
+                                  single: (single) async {
+                                    final capturedImage = single.file;
+                                    if (capturedImage != null) {
+                                      selectedColor =  await getResistorColors(capturedImage);
+                                      calculateR();
+                                      StatusService.instance.updateText(" $reString");                          
+                                      _processedText = "Image processed";
+                                    }
+                                  }
+                                );
+                              }
+                            },
+                            previewFit: CameraPreviewFit.contain,
+                          //end of camerawesome child
+                        ),
+                      ),
+                    ), // AspectRatio
                   ),
                 ),
                 Container(
                   width: 100,
-                  height: 300,
+                  height: 250,
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: Colors.red, 
@@ -156,11 +142,11 @@ class _CameraPage extends State<CameraPage> {
                 ),
                 Container(
                   width: 3,
-                  height: 400,
-                  color: Colors.purple,
+                  height: 300,
+                  color: Colors.lightGreenAccent,
                 ),
                 Positioned(
-                  top: 10, // Distance from the top
+                  top: 0, // Distance from the top
                   left: 0,
                   right: 0,
                   child: Stack(
@@ -178,7 +164,7 @@ class _CameraPage extends State<CameraPage> {
                                 foreground: Paint()
                                 ..style = PaintingStyle.stroke
                                 ..strokeWidth = 2
-                                ..color = Colors.black, // Outline Color
+                                ..color = Colors.white, // Outline Color
                               ),
                             );
                           }, // builder
@@ -193,7 +179,7 @@ class _CameraPage extends State<CameraPage> {
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white, // Fill Color
+                              color: Colors.black, // Fill Color
                             ),
                           );
                         }, // builder

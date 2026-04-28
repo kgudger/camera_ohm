@@ -1,69 +1,91 @@
 import 'package:camera_ohm/main.dart';
 import 'dart:math';
 
+//import 'package:flutter/material.dart';
+
 String reString = "Select Colors";
 
 void calculateR() {
   String defaultString = "Inappropriate colors";
-  double totalR = 0.0;
-  ColorLabel? tempC = selectedColor[0];
-  int newR = (tempC!.index) ;
-  if (newR == 0 || newR > 9 || selectedColor[1]!.index > 9 ) {
+  
+  ColorLabel? c0 = selectedColor.elementAtOrNull(0);
+  ColorLabel? c1 = selectedColor.elementAtOrNull(1);
+  ColorLabel? c2 = selectedColor.elementAtOrNull(2);
+  ColorLabel? c3 = selectedColor.elementAtOrNull(3);
+  ColorLabel? c4 = selectedColor.elementAtOrNull(4);
+
+  // Basic null + range validation
+  if (c0 == null || c1 == null || c2 == null) {
     reString = defaultString;
     return;
   }
-  int newMult = selectedColor[2]!.index;
-  if (newMult > 9) {
+
+  if (c0.index == 0 || c0.index > 9 || c1.index > 9 || c2.index > 9) {
     reString = defaultString;
     return;
   }
-  totalR = selectedColor[1]!.index.toDouble();
-  totalR = newR.toDouble() * 10.0 + totalR;
+
+  double totalR = c0.index * 10 + c1.index.toDouble();
+  int multiplier = c2.index;
   int decimals = 1;
-  if (selectedColor[3]!.label != 'None') {
-    totalR = 10*totalR + selectedColor[2]!.index ;
-    newMult = selectedColor[3]!.index;
+
+  // Optional 4th band
+  if (c3 != null && c3.label != 'None') {
+    totalR = totalR * 10 + c2.index;
+    multiplier = c3.index;
     decimals = 2;
   }
-  switch (newMult) {
-    case <= 9:
-      totalR = totalR * pow(10,newMult);
-    case 10:
-      totalR = totalR * pow(10,-1);
-    case 11:
-        totalR = totalR * pow(10,-2);
-    default:
-      reString = defaultString;
-  } 
-  switch (totalR) {
-    case >= 1000000000 :
-      reString = "R = ${(totalR / 1000000000).toStringAsFixed(decimals)} G ohms ";
-    case >= 1000000:
-      reString = "R = ${(totalR / 1000000).toStringAsFixed(decimals)} M ohms ";
-    case >= 1000:
-      reString = "R = ${(totalR / 1000).toStringAsFixed(decimals)} K ohms ";
-    case -1.0:
-      reString = "Please enter appropriate colors";
-    default:
-      reString = "R = ${totalR.toStringAsFixed(decimals)} ohms ";
+
+  // Apply multiplier
+  totalR = _applyMultiplier(totalR, multiplier, defaultString);
+  if (totalR == -1) return;
+
+  // Format result
+  String result = _formatResistance(totalR, decimals);
+
+  // Tolerance
+  String tolerance = _getTolerance(c4);
+
+  reString = "$result $tolerance";
+}
+
+double _applyMultiplier(double value, int multiplier, String defaultString) {
+  if (multiplier <= 9) return value * pow(10, multiplier);
+  if (multiplier == 10) return value * pow(10, -1);
+  if (multiplier == 11) return value * pow(10, -2);
+
+  reString = defaultString;
+  return -1;
+}
+
+String _formatResistance(double value, int decimals) {
+  if (value >= 1e9) {
+    return "R = ${(value / 1e9).toStringAsFixed(decimals)} G ohms";
+  } else if (value >= 1e6) {
+    return "R = ${(value / 1e6).toStringAsFixed(decimals)} M ohms";
+  } else if (value >= 1e3) {
+    return "R = ${(value / 1e3).toStringAsFixed(decimals)} K ohms";
+  } else {
+    return "R = ${value.toStringAsFixed(decimals)} ohms";
   }
-  String tol = "10%";
-  switch (selectedColor[4]!.label) {
+}
+
+String _getTolerance(ColorLabel? band) {
+  switch (band?.label) {
     case 'Brown':
-      tol = "1%";
+      return "1%";
     case 'Red':
-      tol = "2%";
+      return "2%";
     case 'Green':
-      tol = "0.5%";
+      return "0.5%";
     case 'Blue':
-      tol = "0.25%";
+      return "0.25%";
     case 'Grey':
-      tol = "0.05%";
+      return "0.05%";
     case 'Gold':
-      tol = "5%";
+      return "5%";
     default:
-      tol = "10%";
+      return "10%";
   }
-  reString = reString + tol; 
 }
 
