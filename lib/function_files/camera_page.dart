@@ -20,7 +20,8 @@ class _CameraPage extends State<CameraPage> {
 //  bool _isInitialized = false;
   var logger = Logger();
   String _processedText = "No image processed yet";
-
+  bool _brightnessSet = false;
+  dynamic _cameraState;
   // 1. Your custom function to process the image
 /*  Future<void> _getResistorColors(String filePath) async {
     setState(() {
@@ -76,11 +77,11 @@ class _CameraPage extends State<CameraPage> {
                   Center(
                     child: AspectRatio(
                       aspectRatio: 3 / 4,
-                      child: ClipRect
-                      ( // suggested by ChatGPT
-                        child: /*!_isInitialized
+                        child: ClipRect
+                        ( // suggested by ChatGPT
+                          child: /*!_isInitialized
                   ? const Center(child: CircularProgressIndicator())
-                      :*/ CameraAwesomeBuilder.awesome(
+                      :*/ CameraAwesomeBuilder.custom(
                             sensorConfig: SensorConfig.single(
                               sensor: Sensor.position(SensorPosition.front), // back for device, front for emulator
                               aspectRatio: CameraAspectRatios.ratio_4_3,
@@ -103,12 +104,12 @@ class _CameraPage extends State<CameraPage> {
                                   ),
                                   sensors.first,
                                 );
-                              },
+                              },  // photoPathBuilder
                             ),
                             onMediaCaptureEvent: (event) {
                               if (event.status == MediaCaptureStatus.success && 
                                   event.isPicture) {
-                          // Retrieve the file path from the capture request
+                            // Retrieve the file path from the capture request
                                 event.captureRequest.when(
                                   single: (single) async {
                                     final capturedImage = single.file;
@@ -123,10 +124,22 @@ class _CameraPage extends State<CameraPage> {
                               }
                             },
                             previewFit: CameraPreviewFit.contain,
-                          //end of camerawesome child
+                            builder: (state, previewSize) {
+                              _cameraState = state;
+                              // Works across more CamerAwesome versions
+                              if (!_brightnessSet) {
+                                  _brightnessSet = true;
+                                try {
+                                  state.sensorConfig.setBrightness(0.7); // range ~0.0–1.0
+                                } catch (e) {
+                                  print("Brightness not supported: $e");
+                                }
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),//end of camerawesome child
                         ),
                       ),
-                    ), // AspectRatio
                   ),
                 ),
                 Container(
@@ -171,30 +184,55 @@ class _CameraPage extends State<CameraPage> {
                         ),
                       ),
           // 2. The Main Text (Filled)
-                      Center( child: ValueListenableBuilder<String>(
+                      Center( child: 
+                      ValueListenableBuilder<String>(
                         valueListenable: StatusService.instance.sharedText,
-                        builder: (context, currentString, child) {
-                          return Text(
-                            currentString,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black, // Fill Color
-                            ),
-                          );
-                        }, // builder
+                          builder: (context, currentString, child) {
+                            return Text(
+                              currentString,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black, // Fill Color
+                              ),
+                            );
+                          }, // builder
                         ),
                       ),
-                    ],
+                    ], // children
                   ),
                 ),
-              ],
-            ), // children
-          ),          
+                Positioned(
+                  bottom: 20,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () async {
+                        try {
+                          _cameraState?.takePhoto();
+                        } catch (e) {
+                          print("Capture failed: $e");
+                        }
+                      },
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black, width: 3),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ], // children
+            ),
+          ), 
+        ],   // children       
           // Action buttons below the camera
-        ],
       ),
-    );
+    ); // Here is where the error 'Expected to find ;' is
   }
 }
-
