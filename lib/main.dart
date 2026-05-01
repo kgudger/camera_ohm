@@ -5,9 +5,13 @@ import 'package:collection/collection.dart';
 import 'package:camera_ohm/function_files/calculate_r.dart';
 import 'package:camera_ohm/function_files/enter_page.dart';
 import 'package:camera_ohm/function_files/camera_page.dart';
+import 'package:flutter/services.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   runApp(const CamerOhmApp());
 }
 

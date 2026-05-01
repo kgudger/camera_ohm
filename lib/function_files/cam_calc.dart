@@ -9,6 +9,55 @@ import 'package:logger/logger.dart';
 
 //import 'package:opencv_dart/opencv.dart' as cv;
 //import 'package:camera_ohm/function_files/camera_page.dart';
+img.Image cropCenter(img.Image image) {
+  final int w = image.width;
+  final int h = image.height;
+
+  final int cropW = (w * 0.4).toInt();
+  final int cropH = (h * 0.6).toInt();
+
+  return img.copyCrop(
+    image,
+    x: (w - cropW) ~/ 2,
+    y: (h - cropH) ~/ 2,
+    width: cropW,
+    height: cropH,
+  );
+}
+
+img.Image normalizeWhiteBalance(img.Image image) {
+  int totalR = 0, totalG = 0, totalB = 0;
+  int count = image.width * image.height;
+
+  for (int y = 0; y < image.height; y++) {
+    for (int x = 0; x < image.width; x++) {
+      final p = image.getPixel(x, y);
+      totalR += p.r.toInt();
+      totalG += p.g.toInt();
+      totalB += p.b.toInt();
+    }
+  }
+
+  final avgR = totalR / count;
+  final avgG = totalG / count;
+  final avgB = totalB / count;
+
+  final gray = (avgR + avgG + avgB) / 3;
+
+  for (int y = 0; y < image.height; y++) {
+    for (int x = 0; x < image.width; x++) {
+      final p = image.getPixel(x, y);
+
+      int r = (p.r * gray / avgR).clamp(0, 255).toInt();
+      int g = (p.g * gray / avgG).clamp(0, 255).toInt();
+      int b = (p.b * gray / avgB).clamp(0, 255).toInt();
+
+      image.setPixelRgba(x, y, r, g, b, 255);
+    }
+  }
+
+  return image;
+}
 
 Future<List<ColorLabel?>> getResistorColors(XFile? capturedImage ) async {
   var logger = Logger();
@@ -17,11 +66,16 @@ Future<List<ColorLabel?>> getResistorColors(XFile? capturedImage ) async {
 
   // 1. Load the image bytes
   final bytes = await capturedImage!.readAsBytes();
-  final img.Image? decodedImage = img.decodeImage(bytes);
+  img.Image? decodedImage = img.decodeImage(bytes);
   if (decodedImage == null) return [ColorLabel.none];
+  decodedImage = cropCenter(decodedImage); // Crop to most important part
+    // 2. White balance correction
+  decodedImage = normalizeWhiteBalance(decodedImage);
 
-  // 2. Placeholder for ML/Computer Vision Logic
-  // In a real app, you would pass 'decodedImage' to a TFLite model here.
+  // 3. Mild contrast boost
+  img.adjustColor(decodedImage, contrast: 1.1);
+
+
   // The model would return bounding boxes for the bands.
   List<ColorLabel> detectedBands = await _analyzeImageForBands(decodedImage,capturedImage);
   List<ColorLabel> returnedBands = detectedBands.asMap().entries
@@ -116,6 +170,7 @@ Future<List<ColorLabel>> _analyzeImageForBands(img.Image image, XFile capturedIm
           pixelr, 
           pixelg, 
           pixelb);
+        print(medianColor);
         indexOld = index;                
         colorLabel.add(getClosestColor(medianColor, candidates));
         listR.clear();
@@ -144,7 +199,7 @@ List<img.Pixel> getCenterPixels(img.Image photo) {
 
   for (int y = ytop; y < ybottom; y++) {
     // Grabs the pixel at the center X coordinate for every Y row
-    print(photo.getPixel(centerX, y));
+//    print(photo.getPixel(centerX, y));
     columnPixels.add(photo.getPixel(centerX, y));
   }
   return columnPixels;

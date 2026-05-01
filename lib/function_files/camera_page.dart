@@ -60,6 +60,9 @@ class _CameraPage extends State<CameraPage> {
     debugPrint("Camera permission not granted");
   }
 }
+SensorPosition _currentSensor = SensorPosition.front;
+double _brightness = 0.5;
+
   @override
   Widget build(BuildContext context) {
     StatusService.instance.updateText(reString);
@@ -81,63 +84,67 @@ class _CameraPage extends State<CameraPage> {
                         ( // suggested by ChatGPT
                           child: /*!_isInitialized
                   ? const Center(child: CircularProgressIndicator())
-                      :*/ CameraAwesomeBuilder.custom(
-                            sensorConfig: SensorConfig.single(
-                              sensor: Sensor.position(SensorPosition.front), // back for device, front for emulator
-                              aspectRatio: CameraAspectRatios.ratio_4_3,
-                            ),
+                      :*/ KeyedSubtree(
+                            key: ValueKey(_currentSensor),
+                            child: CameraAwesomeBuilder.custom(
+                              sensorConfig: SensorConfig.single(
+                                sensor: Sensor.position(_currentSensor), // back for device, front for emulator
+                                aspectRatio: CameraAspectRatios.ratio_4_3,
+                              ),
           //                  customPreview: (preview) => preview,
                       // 2. Listen for the capture event
-                            saveConfig: SaveConfig.photoAndVideo(
-                              initialCaptureMode: CaptureMode.photo,
-                              photoPathBuilder: (sensors) async {
-//                                final Directory extDir = await getTemporaryDirectory();
-//                                final testDir = await Directory(p.join(extDir.path, 'camerawesome')).create(recursive: true);
-                                  final directory = Directory('/storage/emulated/0/Download/');
+                              saveConfig: SaveConfig.photoAndVideo(
+                                initialCaptureMode: CaptureMode.photo,
+                                photoPathBuilder: (sensors) async {
+  //                                final Directory extDir = await getTemporaryDirectory();
+  //                                final testDir = await Directory(p.join(extDir.path, 'camerawesome')).create(recursive: true);
+                                    final directory = Directory('/storage/emulated/0/Download/');
 
-                                return SingleCaptureRequest(
-                                  p.join(
-//                                    testDir.path,
-                                      directory.path,
-                                    '${DateTime.now().millisecondsSinceEpoch}.jpg',
-//                                      'captured_image.png',
-                                  ),
-                                  sensors.first,
-                                );
-                              },  // photoPathBuilder
-                            ),
-                            onMediaCaptureEvent: (event) {
-                              if (event.status == MediaCaptureStatus.success && 
-                                  event.isPicture) {
-                            // Retrieve the file path from the capture request
-                                event.captureRequest.when(
-                                  single: (single) async {
-                                    final capturedImage = single.file;
-                                    if (capturedImage != null) {
-                                      selectedColor =  await getResistorColors(capturedImage);
-                                      calculateR();
-                                      StatusService.instance.updateText(" $reString");                          
-                                      _processedText = "Image processed";
+                                  return SingleCaptureRequest(
+                                    p.join(
+  //                                    testDir.path,
+                                        directory.path,
+                                      '${DateTime.now().millisecondsSinceEpoch}.jpg',
+  //                                      'captured_image.png',
+                                    ),
+                                    sensors.first,
+                                  );
+                                },  // photoPathBuilder
+                              ),
+
+                              onMediaCaptureEvent: (event) {
+                                if (event.status == MediaCaptureStatus.success && 
+                                    event.isPicture) {
+                              // Retrieve the file path from the capture request
+                                  event.captureRequest.when(
+                                    single: (single) async {
+                                      final capturedImage = single.file;
+                                      if (capturedImage != null) {
+                                        selectedColor =  await getResistorColors(capturedImage);
+                                        calculateR();
+                                        StatusService.instance.updateText(" $reString");                          
+                                        _processedText = "Image processed";
+                                      }
                                     }
-                                  }
-                                );
-                              }
-                            },
-                            previewFit: CameraPreviewFit.contain,
-                            builder: (state, previewSize) {
-                              _cameraState = state;
-                              // Works across more CamerAwesome versions
-                              if (!_brightnessSet) {
-                                  _brightnessSet = true;
-                                try {
-                                  state.sensorConfig.setBrightness(0.7); // range ~0.0–1.0
-                                } catch (e) {
-                                  print("Brightness not supported: $e");
+                                  );
                                 }
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),//end of camerawesome child
+                              },
+                              previewFit: CameraPreviewFit.contain,
+                              builder: (state, previewSize) {
+                                _cameraState = state;
+                                // Works across more CamerAwesome versions
+                                if (!_brightnessSet) {
+                                    _brightnessSet = true;
+  /*                                try {
+                                    state.sensorConfig.setBrightness(0.7); // range ~0.0–1.0
+                                  } catch (e) {
+                                    print("Brightness not supported: $e");
+                                  }*/
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),//end of camerawesome child
+                          ),
                         ),
                       ),
                   ),
@@ -225,6 +232,49 @@ class _CameraPage extends State<CameraPage> {
                         ),
                       ),
                     ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  right: 20,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5), // 👈 key part
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.cameraswitch, color: Colors.white, size: 30),
+                      onPressed: () {
+                        setState(() {
+                          _cameraState = null; // prevent stale reference
+                          _currentSensor =
+                              _currentSensor == SensorPosition.front
+                                  ? SensorPosition.back
+                                  : SensorPosition.front;
+                        });
+                      },
+                    ),
+                  )
+                ),
+                Positioned(
+                  top: 40,
+                  left: 10,
+                  right: 50,
+                  child: Slider(
+                    value: _brightness,
+                    min: 0.0,
+                    max: 1.0,
+                    onChanged: (value) {
+                      setState(() {
+                        _brightness = value;
+                      });
+
+                      try {
+                        _cameraState?.sensorConfig.setBrightness(value);
+                      } catch (e) {
+                        print("Brightness error: $e");
+                      }
+                    },
                   ),
                 ),
               ], // children
