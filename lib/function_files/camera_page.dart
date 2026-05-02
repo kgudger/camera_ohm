@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_ohm/main.dart';
 import 'package:camera_ohm/function_files/cam_calc.dart';
-import 'package:path_provider/path_provider.dart';
+//import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:logger/logger.dart';
 
@@ -39,10 +39,11 @@ class _CameraPage extends State<CameraPage> {
     // 1. Get the min/max bounds (crucial to avoid crashes)
     double minExposure = await _controller!.getMinExposureOffset();
     double maxExposure = await _controller!.getMaxExposureOffset();
-
+    print("MaxExposure is $maxExposure");
+    
     // 2. Set a value within those bounds to brighten the image
     // A value of 1.0 or 2.0 is usually significantly brighter
-    double brightnessValue = 1.0; 
+    double brightnessValue = 0.5; 
 
     if (brightnessValue <= maxExposure && brightnessValue >= minExposure) {
       await _controller!.setExposureOffset(brightnessValue);
@@ -72,37 +73,7 @@ class _CameraPage extends State<CameraPage> {
 /*            padding: const EdgeInsets.all(16.0),
             child: Text("Live Camera Preview:", style: TextStyle(fontSize: 18)),*/
               padding: const EdgeInsets.only(bottom: 20, left: 16, right: 16),//all(20.0),
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (_isInitialized) {
-                          try {
-                          // Ensure that the camera is initialized.
-                          // Attempt to take a picture and then get the location
-                          // where the image file is saved.
-                            final image = await _controller?.takePicture();
-                            // Get external storage directory
-                            //final directory = await getExternalStorageDirectory();
-                            if (image != null) {
-                              final directory = Directory('/storage/emulated/0/Download');
-//                              final directory = await getApplicationDocumentsDirectory();
-                              final File localImage = await File(image.path).copy('${directory.path}/captured_image.png');
-//                              logger.d(directory.path); 
-//                              if (context.mounted) DialogHelper.showAlertDialog(context, directory.path);
-                            }
-                              selectedColor = await getResistorColors(image!);
-                              calculateR();
-                              StatusService.instance.updateText(" $reString");                          
-//                            print('Image captured at: ${image.path}');
-                          } catch (e) {
-                          // If an error occurs, log the error to the console.
-//                            print(e);
-                          }
-                    }
-                    
-                  }, child: Text('Calculate R'),
-                  
           ),
-      ),
 //            SizedBox(width: 20),
           Stack(
             alignment: Alignment.center,
@@ -140,56 +111,105 @@ class _CameraPage extends State<CameraPage> {
                 top: 10, // Distance from the top
                 left: 0,
                 right: 0,
-      child: Stack(
-        children: [
-          // 1. The Outline Text (Stroke)
-          Center(
-            child: ValueListenableBuilder<String>(
-              valueListenable: StatusService.instance.sharedText,
-              builder: (context, currentString, child) {
-                return Text(
-                  currentString,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    foreground: Paint()
-                      ..style = PaintingStyle.stroke
-                      ..strokeWidth = 2
-                      ..color = Colors.black, // Outline Color
-                  ),
-                );
-              },
-            ),
-/*child: Text(
-            ' $reString ',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              foreground: Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 2
-                ..color = Colors.black, // Outline Color
+                child: Stack(
+                  children: [
+                    // 1. The Outline Text (Stroke)
+                    Center(
+                      child: ValueListenableBuilder<String>(
+                        valueListenable: StatusService.instance.sharedText,
+                        builder: (context, currentString, child) {
+                          return Text(
+                            currentString,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              foreground: Paint()
+                                ..style = PaintingStyle.stroke
+                                ..strokeWidth = 2
+                                ..color = Colors.black, // Outline Color
+                            ),
+                          );
+                        },
+                      ),
+          /*child: Text(
+                      ' $reString ',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        foreground: Paint()
+                          ..style = PaintingStyle.stroke
+                          ..strokeWidth = 2
+                          ..color = Colors.black, // Outline Color
+                        ),
+                      ),*/
+                    ),
+                    // 2. The Main Text (Filled)
+                    Center( child: ValueListenableBuilder<String>(
+                        valueListenable: StatusService.instance.sharedText,
+                        builder: (context, currentString, child) {
+                          return Text(
+                            currentString,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white, // Fill Color
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),*/
-          ),
-          // 2. The Main Text (Filled)
-          Center( child: ValueListenableBuilder<String>(
-              valueListenable: StatusService.instance.sharedText,
-              builder: (context, currentString, child) {
-                return Text(
-                  currentString,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // Fill Color
+                Positioned(
+                  bottom: 20,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () async {
+                        try {
+                    if (_isInitialized) {
+                          try {
+                          // Ensure that the camera is initialized.
+                          // Attempt to take a picture and then get the location
+                          // where the image file is saved.
+                            final image = await _controller?.takePicture();
+                            // Get external storage directory
+                            //final directory = await getExternalStorageDirectory();
+                            if (image != null) {
+                              final directory = Directory('/storage/emulated/0/Download');
+//                              final directory = await getApplicationDocumentsDirectory();
+                              final File localImage = await File(image.path).copy('${directory.path}/captured_image.png');
+//                              logger.d(directory.path); 
+//                              if (context.mounted) DialogHelper.showAlertDialog(context, directory.path);
+                            }
+                              selectedColor = await getResistorColors(image!);
+                              calculateR();
+                              StatusService.instance.updateText(" $reString");                          
+//                            print('Image captured at: ${image.path}');
+                          } catch (e) {
+                          // If an error occurs, log the error to the console.
+//                            print(e);
+                          }
+                    }
+                                      
+                        } catch (e) {
+                          print("Capture failed: $e");
+                        }
+                      },
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black, width: 3),
+                        ),
+                      ),
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-              )
+                ),
             ], // children
           ),          
           // Action buttons below the camera
