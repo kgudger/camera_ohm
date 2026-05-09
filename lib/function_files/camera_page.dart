@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_ohm/main.dart';
 import 'package:camera_ohm/function_files/cam_calc.dart';
-//import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:logger/logger.dart';
 
@@ -43,10 +43,10 @@ class _CameraPage extends State<CameraPage> {
     
     // 2. Set a value within those bounds to brighten the image
     // A value of 1.0 or 2.0 is usually significantly brighter
-    double brightnessValue = 0.5; 
+    double brightnessValue = 0.0; 
 
-    if (brightnessValue <= maxExposure && brightnessValue >= minExposure) {
-      await _controller!.setExposureOffset(brightnessValue);
+    if (brightnessValue <= maxExposure && brightnessValue > minExposure) {
+//      await _controller!.setExposureOffset(brightnessValue);
         if (!mounted) return;
 //        setState(() => _isInitialized = true);
     }
@@ -84,8 +84,21 @@ class _CameraPage extends State<CameraPage> {
                   ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
+/*                      borderRadius: BorderRadius.circular(15),
                       child: CameraPreview(_controller!),
+                    ),*/
+                      child: Container(
+                        alignment: Alignment.center,
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            // Calculate height based on the sensor aspect ratio
+                            width: MediaQuery.of(context).size.width,
+                            height: MediaQuery.of(context).size.width / _controller!.value.aspectRatio,
+                            child: CameraPreview(_controller!),
+                          ),
+                        ),
+                      ),
                     ),
                   )
                 : Center(child: CircularProgressIndicator()),
@@ -178,11 +191,15 @@ class _CameraPage extends State<CameraPage> {
                             // Get external storage directory
                             //final directory = await getExternalStorageDirectory();
                             if (image != null) {
-                              final directory = Directory('/storage/emulated/0/Download');
-//                              final directory = await getApplicationDocumentsDirectory();
-                              final File localImage = await File(image.path).copy('${directory.path}/captured_image.png');
-//                              logger.d(directory.path); 
+//                              final directory = Directory('/storage/emulated/0/Download');
+                            //  final directory = Directory('/mnt/chromeos/MyFiles/Downloads');
+                              final Directory? directory = await getDownloadsDirectory();// 
+                              if (directory != null) {
+                              //final directory = await getApplicationDocumentsDirectory();
+                                final File localImage = await File(image.path).copy('${directory.path}/captured_image.png');
+                                logger.d(directory.path); 
 //                              if (context.mounted) DialogHelper.showAlertDialog(context, directory.path);
+                              }
                             }
                               selectedColor = await getResistorColors(image!);
                               calculateR();
@@ -195,7 +212,7 @@ class _CameraPage extends State<CameraPage> {
                     }
                                       
                         } catch (e) {
-                          print("Capture failed: $e");
+                          logger.d("Capture failed: $e");
                         }
                       },
                       child: Container(
