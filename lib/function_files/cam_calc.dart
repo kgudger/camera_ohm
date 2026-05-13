@@ -181,21 +181,27 @@ Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
 //  printCenter(decodedImage);
   saveImage(decodedImage,2);
 
-  final profile = horizontalProfile(decodedImage); // now it's HSV, not RGB
-  saveHSVListToImage(profile, 1, profile.length,0);
+  final (hsvprofile, rgbProfile) = horizontalProfile(decodedImage); 
+    // now it's HSV and RGB
+  saveHSVListToImage(hsvprofile, 1, hsvprofile.length,0);
 /*  final smooth = smoothProfile(profile);
 //  saveRgbListToImage(smooth, 1, smooth.length,1);
 //  final segments = segmentBands(smooth);
   final segments = segmentBands(profile);
   final averaged = averageBands(segments);*/
-  final transitions = transitionProfile(profile);
+  final transitions = transitionProfile(hsvprofile); // profile is HSV
   final edges = detectEdges(transitions);
-  final hsvProfile = averageHsvSegments(profile, edges); // gives small number of hsv values into bands
-  final bandColors = hsvProfile.map(classifyColor).toList();
+  final profileHsv = averageHsvSegments(hsvprofile, edges);
+//  final profileLab = averageLabSegments(rgbProfile, edges); // gives small number of hsv values into bands
+   // takes rgb profile and returns an averaged over rgb to lab conversion
+//  final bandColors = profileLab.map(classifyLab).toList();
+  final bandColorsHsv = profileHsv.map(classifyColor).toList();
+  final bandColors = profileHsv.map(classifyHSV).toList();
+  logger.d(bandColorsHsv);
   final filtered = filterBands(bandColors);
   logger.d(filtered);
   final ordered = (filtered);
-  logger.d(ordered);
+//  logger.d(ordered);
   return ordered;
 /*
   List<ColorLabel> detectedBands = await _analyzeImageForBands(decodedImage);
@@ -361,8 +367,9 @@ int calculateMedian(List<int> list) {
 
 List<Color> candidates = ColorLabel.values.map((e) => e.color).toList(); 
 
-List<List<double>> horizontalProfile(img.Image image) {
-  final profile = <List<double>>[];
+(List<List<double>> hsvprofile, List<List<double>> rgbprofile) horizontalProfile(img.Image image) {
+  final hsvProfile = <List<double>>[];
+  final rgbProfile = <List<double>>[];
 
   for (int y = 0; y < image.height; y++) {
     double r = 0, g = 0, b = 0;
@@ -375,9 +382,11 @@ List<List<double>> horizontalProfile(img.Image image) {
     }
 
     final hsv = rgbToHsv(r/image.width, g/image.width, b/image.width);
-    profile.add(hsv);
+    hsvProfile.add(hsv);
+    final rgb = [r/image.width, g/image.width, b/image.width];
+    rgbProfile.add(rgb);
   }
-  return profile;
+  return (hsvProfile, rgbProfile);
 }
 
 List<double> transitionProfile(List<List<double>> profile) {
@@ -659,16 +668,28 @@ ColorLabel classifyColor(List<double> hsv) {
   final s = hsv[1];
   final v = hsv[2];
 
-  if (v < 0.15) return ColorLabel.values[0]; //"black";
-  if (s < 0.15 && v > 0.7) return ColorLabel.values[9];//"white";
-  if (s < 0.2) return ColorLabel.values[8];// "gray";
-
+  if (v < 0.12) return ColorLabel.values[0]; //"black";
+  if (s < 0.15) {
+    if (v > 0.75) return ColorLabel.values[9];//"white";
+    return ColorLabel.values[8];//"gray";
+  }
   if (h < 15 || h > 345) return ColorLabel.values[2];// "red";
-  if (h < 45) return ColorLabel.values[1]; //"brown/orange";
-  if (h < 70) return ColorLabel.values[4]; "yellow";
-  if (h < 170) return ColorLabel.values[5]; "green";
-  if (h < 260) return ColorLabel.values[6]; "blue";
-  if (h < 320) return ColorLabel.values[7]; "violet";
+  if (h >= 15 && h < 45) {
+    // Brown = darker orange
+    if (v < 0.55) {
+      return ColorLabel.values[1]; //"brown";
+    }
+    // Gold tends to be less saturated
+    if (s < 0.65 && v > 0.6) {
+      return ColorLabel.values[10]; //"gold";
+    }
+
+    return ColorLabel.values[3]; //"orange";
+  }
+  if (h >= 45 && h < 70) return ColorLabel.values[4]; "yellow";
+  if (h >= 70 && h < 170) return ColorLabel.values[5]; "green";
+  if (h >= 170 && h < 260) return ColorLabel.values[6]; "blue";
+  if (h >= 260 && h < 320) return ColorLabel.values[7]; "violet";
 
   return ColorLabel.values[12]; // none;
 }
@@ -740,4 +761,207 @@ List<List<double>> averageHsvSegments(
   }
 
   return segments;
+}
+
+List<double> rgbToLab(double r, double g, double b) {
+  // Normalize RGB
+  r /= 255.0;
+  g /= 255.0;
+  b /= 255.0;
+
+  // Gamma correction
+  r = r > 0.04045
+      ? pow((r + 0.055) / 1.055, 2.4).toDouble()
+      : r / 12.92;
+
+  g = g > 0.04045
+      ? pow((g + 0.055) / 1.055, 2.4).toDouble()
+      : g / 12.92;
+
+  b = b > 0.04045
+      ? pow((b + 0.055) / 1.055, 2.4).toDouble()
+      : b / 12.92;
+
+  // RGB -> XYZ
+  double x =
+      r * 0.4124 +
+      g * 0.3576 +
+      b * 0.1805;
+
+  double y =
+      r * 0.2126 +
+      g * 0.7152 +
+      b * 0.0722;
+
+  double z =
+      r * 0.0193 +
+      g * 0.1192 +
+      b * 0.9505;
+
+  // Reference white
+  x /= 0.95047;
+  y /= 1.00000;
+  z /= 1.08883;
+
+  double f(double t) {
+    return t > 0.008856
+        ? pow(t, 1 / 3).toDouble()
+        : (7.787 * t) + (16 / 116);
+  }
+
+  final fx = f(x);
+  final fy = f(y);
+  final fz = f(z);
+
+  final L = (116 * fy) - 16;
+  final A = 500 * (fx - fy);
+  final B = 200 * (fy - fz);
+
+  return [L, A, B];
+}
+
+double labDistance(List<double> a, List<double> b) {
+  return sqrt(
+    pow(a[0] - b[0], 2) +
+    pow(a[1] - b[1], 2) +
+    pow(a[2] - b[2], 2),
+  );
+}
+
+ColorLabel classifyLab(List<double> lab) {
+/*  final lab =
+      rgbToLab(rgb[0], rgb[1], rgb[2]);
+*/
+  ColorLabel bestColor = ColorLabel.values[0]; // black
+  double bestDistance = double.infinity;
+
+  resistorLabColors.forEach((name, refLab) {
+    final d = labDistance(lab, refLab);
+
+    if (d < bestDistance) {
+      bestDistance = d;
+      bestColor = name; // name is a ColorLabel
+    }
+  });
+
+  return bestColor;
+}
+
+List<List<double>> averageLabSegments(
+  List<List<double>> rgbProfile,
+  List<int> edges,
+) {
+  final segments = <List<double>>[];
+
+  if (edges.length < 2) return segments;
+
+  for (int i = 0; i < edges.length - 1; i++) {
+    final start = edges[i];
+    final end = edges[i + 1];
+    if (end <= start) continue;
+
+    final margin =
+        ((end - start) * 0.1).toInt();
+
+    final safeStart = start + margin;
+    final safeEnd = end - margin;
+
+    double sumR = 0;
+    double sumG = 0;
+    double sumB = 0;
+
+    int count = 0;
+
+    for (int x = safeStart; x < safeEnd; x++) {
+      if (x < 0 || x >= rgbProfile.length) continue;
+
+      sumR += rgbProfile[x][0];
+      sumG += rgbProfile[x][1];
+      sumB += rgbProfile[x][2];
+
+      count++;
+    }
+
+    if (count == 0) continue;
+
+    segments.add(rgbToLab(sumR / count,
+      sumG / count,
+      sumB / count)
+    ); // convert rgb average to LAB to return.
+  }
+  return segments;
+}
+
+final resistorLabColors = {
+  ColorLabel.values[0]: rgbToLab(0, 0, 0), // black
+  ColorLabel.values[1]: rgbToLab(120, 70, 30), // brown
+  ColorLabel.values[2]: rgbToLab(200, 30, 30), // red
+  ColorLabel.values[3]: rgbToLab(255, 120, 20), // orange
+  ColorLabel.values[4]: rgbToLab(255, 220, 30), // yellow
+  ColorLabel.values[5]: rgbToLab(30, 160, 60), // green
+  ColorLabel.values[6]: rgbToLab(30, 90, 220), // blue
+  ColorLabel.values[7]: rgbToLab(140, 60, 180), // violet
+  ColorLabel.values[8]: rgbToLab(140, 140, 140), // gray
+  ColorLabel.values[9]: rgbToLab(240, 240, 240), // white
+  ColorLabel.values[10]: rgbToLab(212, 175, 55), // gold
+  ColorLabel.values[11]: rgbToLab(192, 192,192), // silver
+  ColorLabel.values[12]: rgbToLab(0, 0, 0), // none
+};
+
+final resistorHSV = {
+  ColorLabel.values[0]: [0.0,   0.0, 0.05], // black
+  ColorLabel.values[1]: [25.0,  0.75, 0.35], // brown
+  ColorLabel.values[2]:   [0.0,   0.85, 0.75], // red
+  ColorLabel.values[3]:[30.0,  0.90, 0.90], // orange
+  ColorLabel.values[4]:[60.0,  0.85, 0.95], // yellow
+  ColorLabel.values[5]: [120.0, 0.80, 0.60], // green
+  ColorLabel.values[6]:  [220.0, 0.85, 0.70], // blue
+  ColorLabel.values[7]:[285.0, 0.75, 0.65], // violet
+  ColorLabel.values[8]:  [0.0,   0.0, 0.50], // gray
+  ColorLabel.values[9]: [0.0,   0.0, 0.95], // white
+  ColorLabel.values[10]:  [45.0,  0.55, 0.75], // gold
+  ColorLabel.values[11]:  [0.0,  0.0, 0.75], // silver
+  ColorLabel.values[12]:  [0.0,  0.0, 0.0], // none
+};
+
+double hsvDistance(
+  List<double> a,
+  List<double> b,
+) {
+  double hueDiff =
+      (a[0] - b[0]).abs();
+
+  // Circular hue distance
+  if (hueDiff > 180) {
+    hueDiff = 360 - hueDiff;
+  }
+
+  final satDiff =
+      (a[1] - b[1]).abs();
+
+  final valDiff =
+      (a[2] - b[2]).abs();
+
+  return
+      hueDiff * 2.0 +
+      satDiff * 100 +
+      valDiff * 40;
+}
+
+ColorLabel classifyHSV(List<double> hsv) {
+
+  ColorLabel best = ColorLabel.values[0]; // black
+  double bestDist = double.infinity;
+
+  resistorHSV.forEach((name, ref) {
+
+    final d = hsvDistance(hsv, ref);
+
+    if (d < bestDist) {
+      bestDist = d;
+      best = name;
+    }
+  });
+
+  return best;
 }
