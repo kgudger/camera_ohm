@@ -8,16 +8,51 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
 
-//import 'package:flex_color_picker/flex_color_picker.dart';
+Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
+  var logger = Logger();
 
-//import 'package:opencv_dart/opencv.dart' as cv;
-//import 'package:camera_ohm/function_files/camera_page.dart';
+  logger.d(capturedImage.path);
+
+  // 1. Load the image bytes
+  final bytes = await capturedImage.readAsBytes();
+  img.Image? decodedImage = img.decodeImage(bytes);
+
+  if (decodedImage == null) return [ColorLabel.none];
+  
+  decodedImage = cropCenter(decodedImage); // Crop to most important part
+  saveImage(decodedImage,0);
+    // 2. White balance correction
+  decodedImage = normalizeWhiteBalance(decodedImage);
+  saveImage(decodedImage,1);
+  
+  decodedImage = blurImage(decodedImage);
+  saveImage(decodedImage,2);
+
+  final (hsvprofile, rgbProfile) = horizontalProfile(decodedImage); 
+    // now it's HSV and RGB
+  saveHSVListToImage(hsvprofile, 1, hsvprofile.length,0);
+
+  final transitions = transitionProfile(hsvprofile); // profile is HSV
+  final edges = detectEdges(transitions);
+  final profileHsv = averageHsvSegments(hsvprofile, edges);
+  final bandColorsHsv = profileHsv.map(classifyColor).toList();
+  final bandColors = profileHsv.map(classifyHSV).toList();
+  logger.d(bandColorsHsv);
+
+  final filtered = filterBands(bandColors);
+  logger.d(filtered);
+
+  final ordered = (filtered);
+  return ordered;
+}
+
+List<Color> candidates = ColorLabel.values.map((e) => e.color).toList(); 
 
 img.Image cropCenter(img.Image image) {
   final int w = image.width; // rotated 90 deg, so width is height
   final int h = image.height;
 
-  final int cropW = (w * 0.1).toInt();
+  final int cropW = (w * 0.05).toInt();
   final int cropH = (h * 0.6).toInt();
 
   return img.copyCrop(
@@ -62,87 +97,8 @@ img.Image normalizeWhiteBalance(img.Image image) {
   return image;
 }
 
-void printCenter(img.Image image) {
-  final int w = image.width;
-  final int h = image.height;
-  final int centerPix = (w ~/ 2);
-  int centerY = h ~/ 2 ;
-
-  for (int y = centerY - 3; y < centerY + 3; y++ ){
-    print(image.getPixel(centerPix, y));
-  }  
-}
 img.Image blurImage(img.Image image) {
   return img.gaussianBlur(image, radius: 1);
-}
-
-List<List<int>> extractPixels(img.Image image) {
-  final pixels = <List<int>>[];
-
-  for (int y = 0; y < image.height; y++) {
-    for (int x = 0; x < image.width; x++) {
-      final p = image.getPixel(x, y);
-      pixels.add([p.r.toInt(), p.g.toInt(), p.b.toInt()]);
-    }
-  }
-
-  return pixels;
-}
-
-List<List<double>> kMeans(List<List<int>> pixels, int k) {
-  final rand = Random();
-
-  // Initialize centroids randomly
-  List<List<double>> centroids = List.generate(
-    k,
-    (_) => pixels[rand.nextInt(pixels.length)]
-        .map((e) => e.toDouble())
-        .toList(),
-  );
-
-  for (int iter = 0; iter < 10; iter++) {
-    List<List<List<int>>> clusters =
-        List.generate(k, (_) => []);
-
-    // Assign pixels to nearest centroid
-    for (var p in pixels) {
-      int best = 0;
-      double bestDist = double.infinity;
-
-      for (int i = 0; i < k; i++) {
-        double dist = pow(p[0] - centroids[i][0], 2) +
-            pow(p[1] - centroids[i][1], 2) +
-            pow(p[2] - centroids[i][2], 2).toDouble();
-
-        if (dist < bestDist) {
-          bestDist = dist;
-          best = i;
-        }
-      }
-
-      clusters[best].add(p);
-    }
-
-    // Recompute centroids
-    for (int i = 0; i < k; i++) {
-      if (clusters[i].isEmpty) continue;
-
-      double r = 0, g = 0, b = 0;
-
-      for (var p in clusters[i]) {
-        r += p[0];
-        g += p[1];
-        b += p[2];
-      }
-
-      centroids[i] = [
-        r / clusters[i].length,
-        g / clusters[i].length,
-        b / clusters[i].length,
-      ];
-    }
-  }
-  return centroids;
 }
 
 Future<void> saveImage(img.Image image, int num) async {
@@ -152,220 +108,9 @@ Future<void> saveImage(img.Image image, int num) async {
   //final directory = await getApplicationDocumentsDirectory();
     final File file = File('${directory.path}/intermediate_$num.png');
     await file.writeAsBytes(pngBytes);
-    print('Image saved to ${file.path}');
+//    print('Image saved to ${file.path}');
   }
 }
-Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
-  var logger = Logger();
-
-  logger.d(capturedImage.path);
-
-  // 1. Load the image bytes
-  final bytes = await capturedImage.readAsBytes();
-  img.Image? decodedImage = img.decodeImage(bytes);
-
-  if (decodedImage == null) return [ColorLabel.none];
-  
-//  printCenter(decodedImage);
-  decodedImage = cropCenter(decodedImage); // Crop to most important part
-  saveImage(decodedImage,0);
-    // 2. White balance correction
-//  decodedImage = normalizeWhiteBalance(decodedImage);
-//  saveImage(decodedImage,1);
-//  printCenter(decodedImage);
-  // 3. Contrast boost
-  /*img.adjustColor(decodedImage, contrast: 1.5);
-  printCenter(decodedImage);
-*/
-  decodedImage = blurImage(decodedImage);
-//  printCenter(decodedImage);
-  saveImage(decodedImage,2);
-
-  final (hsvprofile, rgbProfile) = horizontalProfile(decodedImage); 
-    // now it's HSV and RGB
-  saveHSVListToImage(hsvprofile, 1, hsvprofile.length,0);
-/*  final smooth = smoothProfile(profile);
-//  saveRgbListToImage(smooth, 1, smooth.length,1);
-//  final segments = segmentBands(smooth);
-  final segments = segmentBands(profile);
-  final averaged = averageBands(segments);*/
-  final transitions = transitionProfile(hsvprofile); // profile is HSV
-  final edges = detectEdges(transitions);
-  final profileHsv = averageHsvSegments(hsvprofile, edges);
-//  final profileLab = averageLabSegments(rgbProfile, edges); // gives small number of hsv values into bands
-   // takes rgb profile and returns an averaged over rgb to lab conversion
-//  final bandColors = profileLab.map(classifyLab).toList();
-  final bandColorsHsv = profileHsv.map(classifyColor).toList();
-  final bandColors = profileHsv.map(classifyHSV).toList();
-  logger.d(bandColorsHsv);
-  final filtered = filterBands(bandColors);
-  logger.d(filtered);
-  final ordered = (filtered);
-//  logger.d(ordered);
-  return ordered;
-/*
-  List<ColorLabel> detectedBands = await _analyzeImageForBands(decodedImage);
-
-  final pixels = extractPixels(decodedImage);
-  final clusters = kMeans(pixels, 9);
-  detectedBands = clusters.map(matchColor).toList();
-//  return detectedBands;
-  List<ColorLabel> returnedBands = detectedBands.asMap().entries
-    .where((entry) => entry.key % 2 != 0)
-    .map((entry) => entry.value)
-    .take(6)
-    .toList();
-
-  logger.d(returnedBands); // Prints a pretty-formatted list
-  return returnedBands;*/
-}
-
-Future<List<ColorLabel>> _analyzeImageForBands(img.Image image) async {
-
-  final List<ColorLabel> colorLabel = [];
-  final List<img.Pixel> centerPixels = getCenterPixels(image);
-  //int i = 0;
-  Color oldColor = Colors.black;
-  var indexOld = 0;
-  List<int> listR = [];
-  List<int> listG = [];
-  List<int> listB = [];
-  int pixelr;
-  int pixelg;
-  int pixelb;
-
-  for (var (index, pixel) in centerPixels.indexed) {
-    pixelr = pixel.r.toInt();
-    pixelg = pixel.g.toInt();
-    pixelb = pixel.b.toInt();
-  
-    listR.add(pixelr);
-    listB.add(pixelb);
-    listG.add(pixelg);
-
-    Color flutterColor = Color.fromARGB(
-    pixel.a.toInt(), 
-    pixelr, 
-    pixelg, 
-    pixelb);
-
-    double distance = getColorDistance(oldColor, flutterColor);
-//    print("distance = $distance");
-    if ( distance > 20 ) {
-      if ((index - 2) > indexOld) {
-        pixelr = calculateMedian(listR);
-        pixelg = calculateMedian(listG);
-        pixelb = calculateMedian(listB);
-        Color medianColor = Color.fromARGB(
-          255, 
-          pixelr, 
-          pixelg, 
-          pixelb);
-        indexOld = index;                
-        colorLabel.add(getClosestColor(medianColor, candidates));
-        listR.clear();
-        listB.clear();
-        listG.clear();
-      }  // don't do this if they're too close
-    }
-    oldColor = flutterColor;
-  }
-  return colorLabel;
-  /*[
-    ColorLabel.brown,
-    ColorLabel.black,
-    ColorLabel.red,
-    ColorLabel.none,
-    ColorLabel.gold,
-  ];*/
-}
-List<img.Pixel> getCenterPixels(img.Image photo) {
-  // 640 / 2 = 320 (the center column)
-  int centerX = photo.width;
-  int ytop = photo.height ~/ 4; // 1/4 of the way down
-  int ybottom = ytop * 3;       // 3/4 of the way down
-  centerX = centerX ~/ 2 ; 
-  List<img.Pixel> columnPixels = [];
-
-  for (int y = ytop; y < ybottom; y++) {
-    // Grabs the pixel at the center X coordinate for every Y row
-//    print(photo.getPixel(centerX, y));
-    columnPixels.add(photo.getPixel(centerX, y));
-  }
-  return columnPixels;
-  // Now columnPixels contains all 480 pixels from the center line
-}
-double getColorDistance(Color c1, Color c2) {
-  return sqrt(
-    pow(c1.r * 255.0.round().clamp(0, 255) - c2.r * 255.0.round().clamp(0, 255), 2) +
-    pow(c1.g * 255.0.round().clamp(0, 255) - c2.g * 255.0.round().clamp(0, 255), 2) +
-    pow(c1.b * 255.0.round().clamp(0, 255) - c2.b * 255.0.round().clamp(0, 255), 2),
-  ).toDouble();
-}
-ColorLabel getClosestColor(Color target, List<Color> candidates) {
-//  Color closestColor = candidates.first;
-  double minDistance = double.infinity;
-  int lindex = 0;
-  ColorLabel colorLabel;
-
-//  for (var color in candidates) {
-  for (final (index,  color) in candidates.indexed) {
-    // Calculate squared Euclidean distance in RGB space
-    // Using squared distance avoids expensive sqrt() calls for comparisons
-    double distance = pow(target.r * 255.0.round().clamp(0, 255) - color.r * 255.0.round().clamp(0, 255), 2) +
-                      pow(target.g * 255.0.round().clamp(0, 255) - color.g * 255.0.round().clamp(0, 255), 2) +
-                      pow(target.b * 255.0.round().clamp(0, 255) - color.b * 255.0.round().clamp(0, 255), 2).toDouble();
-
-    if (distance < minDistance) {
-      minDistance = distance;
-//      closestColor = color;
-      lindex = index;
-    }
-  }
-  colorLabel = ColorLabel.values[lindex];
-  return colorLabel;
-}
-
-ColorLabel matchColor(List<double> c) {
-  double bestDist = double.infinity;
-  int lindex = 0;
-  ColorLabel colorLabel;
-
-//  resistorColors.forEach((name, rgb) {
-  for (final (index,  color) in candidates.indexed) {
-    double dist = pow(c[0] - color.r * 255.0.round().clamp(0, 255), 2) +
-        pow(c[1] - color.g * 255.0.round().clamp(0, 255), 2) +
-        pow(c[2] - color.b * 255.0.round().clamp(0, 255), 2).toDouble();
-
-    if (dist < bestDist) {
-      bestDist = dist;
-      lindex = index;
-    }
-  }
-  colorLabel = ColorLabel.values[lindex];
-  return colorLabel;
-}
-
-int calculateMedian(List<int> list) {
-
-  if (list.isEmpty) return 0;
-
-  // 2. Sort the sublist (required for median)
-  list.sort();
-
-  int middle = list.length ~/ 2;
-
-  // 3. Apply median logic
-  if (list.length % 2 == 1) {
-    // Odd length: return the middle element
-    return list[middle];
-  } else {
-    // Even length: return average of the two middle elements
-    return (list[middle - 1] + list[middle]) ~/ 2;
-  }
-}
-
-List<Color> candidates = ColorLabel.values.map((e) => e.color).toList(); 
 
 (List<List<double>> hsvprofile, List<List<double>> rgbprofile) horizontalProfile(img.Image image) {
   final hsvProfile = <List<double>>[];
@@ -443,111 +188,11 @@ List<int> detectEdges(List<double> transitions) {
   return edges;
 }
 
-List<List<double>> extractBandColors(
-  List<List<double>> profile,
-        List<int> edges,) {
-  final colors = <List<double>>[];
-
-  for (int i = 0; i < edges.length - 1; i++) {
-    final start = edges[i];
-    final end = edges[i + 1];
-
-    double r = 0, g = 0, b = 0;
-    int count = 0;
-
-    for (int x = start; x < end; x++) {
-      r += profile[x][0];
-      g += profile[x][1];
-      b += profile[x][2];
-      count++;
-    }
-
-    colors.add([
-      r / count,
-      g / count,
-      b / count,
-    ]);
-  }
-
-  return colors;
-}
-
-List<List<double>> smoothProfile(List<List<double>> profile) {
-  const window = 5;
-  final smoothed = <List<double>>[];
-
-  for (int i = 0; i < profile.length; i++) {
-    double r = 0, g = 0, b = 0;
-    int count = 0;
-
-    for (int j = i - window; j <= i + window; j++) {
-      if (j >= 0 && j < profile.length) {
-        r += profile[j][0];
-        g += profile[j][1];
-        b += profile[j][2];
-        count++;
-      }
-    }
-
-    smoothed.add([r / count, g / count, b / count]);
-  }
-
-  return smoothed;
-}
-
-List<List<List<double>>> segmentBands(List<List<double>> profile) {
-//  const threshold = 30.0;
-  const threshold = 18.0;
-
-  final bands = <List<List<double>>>[];
-  List<List<double>> current = [profile.first];
-
-  for (int i = 1; i < profile.length; i++) {
-    final prev = profile[i - 1];
-    final curr = profile[i];
-
-    double diff = (curr[0] - prev[0]).abs() +
-                  (curr[1] - prev[1]).abs() +
-                  (curr[2] - prev[2]).abs();
-
-    if (diff > threshold) {
-      bands.add(current);
-      current = [];
-    }
-
-    current.add(curr);
-  }
-  bands.add(current);
-  return bands;
-}
-
-List<List<double>> averageBands(List<List<List<double>>> bands) {
-  return bands.map((band) {
-    double r = 0, g = 0, b = 0;
-
-    for (var p in band) {
-      r += p[0];
-      g += p[1];
-      b += p[2];
-    }
-
-    return [
-      r / band.length,
-      g / band.length,
-      b / band.length,
-    ];
-  }).toList();
-}
-
 List<ColorLabel> filterBands(List<ColorLabel> bands) {
   // Keep largest color changes (heuristic)
   if (bands.length <= 6) return bands;
 
   return bands.sublist(0, 6); // simple fallback
-}
-
-List<ColorLabel> orderedColors(List<List<double>> bands) {
-  return bands.map(matchColor).toList();
 }
 
 Future<void> saveHSVListToImage(
@@ -587,18 +232,6 @@ Future<void> saveHSVListToImage(
   }
 }
 
-double luminance(List<double> c) {
-  return 0.299 * c[0] +
-         0.587 * c[1] +
-         0.114 * c[2];
-}
-
-double chroma(List<double> c) {
-  final maxC = [c[0], c[1], c[2]].reduce((a, b) => a > b ? a : b);
-  final minC = [c[0], c[1], c[2]].reduce((a, b) => a < b ? a : b);
-
-  return maxC - minC;
-}
 
 List<double> rgbToHsv(double r, double g, double b) {
   r /= 255;
@@ -820,6 +453,65 @@ List<double> rgbToLab(double r, double g, double b) {
   return [L, A, B];
 }
 
+final resistorHSV = {
+  ColorLabel.values[0]: [0.0,   0.0, 0.05], // black
+  ColorLabel.values[1]: [25.0,  0.75, 0.35], // brown
+  ColorLabel.values[2]:   [0.0,   0.85, 0.75], // red
+  ColorLabel.values[3]:[30.0,  0.90, 0.90], // orange
+  ColorLabel.values[4]:[60.0,  0.85, 0.95], // yellow
+  ColorLabel.values[5]: [120.0, 0.80, 0.60], // green
+  ColorLabel.values[6]:  [220.0, 0.85, 0.70], // blue
+  ColorLabel.values[7]:[285.0, 0.75, 0.65], // violet
+  ColorLabel.values[8]:  [0.0,   0.0, 0.50], // gray
+  ColorLabel.values[9]: [0.0,   0.0, 0.95], // white
+  ColorLabel.values[10]:  [45.0,  0.55, 0.75], // gold
+  ColorLabel.values[11]:  [0.0,  0.0, 0.75], // silver
+  ColorLabel.values[12]:  [0.0,  0.0, 0.0], // none
+};
+
+double hsvDistance(
+  List<double> a,
+  List<double> b,
+) {
+  double hueDiff =
+      (a[0] - b[0]).abs();
+
+  // Circular hue distance
+  if (hueDiff > 180) {
+    hueDiff = 360 - hueDiff;
+  }
+
+  final satDiff =
+      (a[1] - b[1]).abs();
+
+  final valDiff =
+      (a[2] - b[2]).abs();
+
+  return
+      hueDiff * 2.0 +
+      satDiff * 100 +
+      valDiff * 40;
+}
+
+ColorLabel classifyHSV(List<double> hsv) {
+
+  ColorLabel best = ColorLabel.values[0]; // black
+  double bestDist = double.infinity;
+
+  resistorHSV.forEach((name, ref) {
+
+    final d = hsvDistance(hsv, ref);
+
+    if (d < bestDist) {
+      bestDist = d;
+      best = name;
+    }
+  });
+
+  return best;
+}
+
+/*
 double labDistance(List<double> a, List<double> b) {
   return sqrt(
     pow(a[0] - b[0], 2) +
@@ -908,60 +600,360 @@ final resistorLabColors = {
   ColorLabel.values[12]: rgbToLab(0, 0, 0), // none
 };
 
-final resistorHSV = {
-  ColorLabel.values[0]: [0.0,   0.0, 0.05], // black
-  ColorLabel.values[1]: [25.0,  0.75, 0.35], // brown
-  ColorLabel.values[2]:   [0.0,   0.85, 0.75], // red
-  ColorLabel.values[3]:[30.0,  0.90, 0.90], // orange
-  ColorLabel.values[4]:[60.0,  0.85, 0.95], // yellow
-  ColorLabel.values[5]: [120.0, 0.80, 0.60], // green
-  ColorLabel.values[6]:  [220.0, 0.85, 0.70], // blue
-  ColorLabel.values[7]:[285.0, 0.75, 0.65], // violet
-  ColorLabel.values[8]:  [0.0,   0.0, 0.50], // gray
-  ColorLabel.values[9]: [0.0,   0.0, 0.95], // white
-  ColorLabel.values[10]:  [45.0,  0.55, 0.75], // gold
-  ColorLabel.values[11]:  [0.0,  0.0, 0.75], // silver
-  ColorLabel.values[12]:  [0.0,  0.0, 0.0], // none
-};
+void printCenter(img.Image image) {
+  final int w = image.width;
+  final int h = image.height;
+  final int centerPix = (w ~/ 2);
+  int centerY = h ~/ 2 ;
 
-double hsvDistance(
-  List<double> a,
-  List<double> b,
-) {
-  double hueDiff =
-      (a[0] - b[0]).abs();
+  for (int y = centerY - 3; y < centerY + 3; y++ ){
+    print(image.getPixel(centerPix, y));
+  }  
+}
 
-  // Circular hue distance
-  if (hueDiff > 180) {
-    hueDiff = 360 - hueDiff;
+List<List<int>> extractPixels(img.Image image) {
+  final pixels = <List<int>>[];
+
+  for (int y = 0; y < image.height; y++) {
+    for (int x = 0; x < image.width; x++) {
+      final p = image.getPixel(x, y);
+      pixels.add([p.r.toInt(), p.g.toInt(), p.b.toInt()]);
+    }
   }
 
-  final satDiff =
-      (a[1] - b[1]).abs();
-
-  final valDiff =
-      (a[2] - b[2]).abs();
-
-  return
-      hueDiff * 2.0 +
-      satDiff * 100 +
-      valDiff * 40;
+  return pixels;
 }
 
-ColorLabel classifyHSV(List<double> hsv) {
+List<List<double>> kMeans(List<List<int>> pixels, int k) {
+  final rand = Random();
 
-  ColorLabel best = ColorLabel.values[0]; // black
-  double bestDist = double.infinity;
+  // Initialize centroids randomly
+  List<List<double>> centroids = List.generate(
+    k,
+    (_) => pixels[rand.nextInt(pixels.length)]
+        .map((e) => e.toDouble())
+        .toList(),
+  );
 
-  resistorHSV.forEach((name, ref) {
+  for (int iter = 0; iter < 10; iter++) {
+    List<List<List<int>>> clusters =
+        List.generate(k, (_) => []);
 
-    final d = hsvDistance(hsv, ref);
+    // Assign pixels to nearest centroid
+    for (var p in pixels) {
+      int best = 0;
+      double bestDist = double.infinity;
 
-    if (d < bestDist) {
-      bestDist = d;
-      best = name;
+      for (int i = 0; i < k; i++) {
+        double dist = pow(p[0] - centroids[i][0], 2) +
+            pow(p[1] - centroids[i][1], 2) +
+            pow(p[2] - centroids[i][2], 2).toDouble();
+
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = i;
+        }
+      }
+
+      clusters[best].add(p);
     }
-  });
 
-  return best;
+    // Recompute centroids
+    for (int i = 0; i < k; i++) {
+      if (clusters[i].isEmpty) continue;
+
+      double r = 0, g = 0, b = 0;
+
+      for (var p in clusters[i]) {
+        r += p[0];
+        g += p[1];
+        b += p[2];
+      }
+
+      centroids[i] = [
+        r / clusters[i].length,
+        g / clusters[i].length,
+        b / clusters[i].length,
+      ];
+    }
+  }
+  return centroids;
 }
+
+Future<List<ColorLabel>> _analyzeImageForBands(img.Image image) async {
+
+  final List<ColorLabel> colorLabel = [];
+  final List<img.Pixel> centerPixels = getCenterPixels(image);
+  //int i = 0;
+  Color oldColor = Colors.black;
+  var indexOld = 0;
+  List<int> listR = [];
+  List<int> listG = [];
+  List<int> listB = [];
+  int pixelr;
+  int pixelg;
+  int pixelb;
+
+  for (var (index, pixel) in centerPixels.indexed) {
+    pixelr = pixel.r.toInt();
+    pixelg = pixel.g.toInt();
+    pixelb = pixel.b.toInt();
+  
+    listR.add(pixelr);
+    listB.add(pixelb);
+    listG.add(pixelg);
+
+    Color flutterColor = Color.fromARGB(
+    pixel.a.toInt(), 
+    pixelr, 
+    pixelg, 
+    pixelb);
+
+    double distance = getColorDistance(oldColor, flutterColor);
+//    print("distance = $distance");
+    if ( distance > 20 ) {
+      if ((index - 2) > indexOld) {
+        pixelr = calculateMedian(listR);
+        pixelg = calculateMedian(listG);
+        pixelb = calculateMedian(listB);
+        Color medianColor = Color.fromARGB(
+          255, 
+          pixelr, 
+          pixelg, 
+          pixelb);
+        indexOld = index;                
+        colorLabel.add(getClosestColor(medianColor, candidates));
+        listR.clear();
+        listB.clear();
+        listG.clear();
+      }  // don't do this if they're too close
+    }
+    oldColor = flutterColor;
+  }
+  return colorLabel;
+  /*[
+    ColorLabel.brown,
+    ColorLabel.black,
+    ColorLabel.red,
+    ColorLabel.none,
+    ColorLabel.gold,
+  ];*/
+}
+
+List<img.Pixel> getCenterPixels(img.Image photo) {
+  // 640 / 2 = 320 (the center column)
+  int centerX = photo.width;
+  int ytop = photo.height ~/ 4; // 1/4 of the way down
+  int ybottom = ytop * 3;       // 3/4 of the way down
+  centerX = centerX ~/ 2 ; 
+  List<img.Pixel> columnPixels = [];
+
+  for (int y = ytop; y < ybottom; y++) {
+    // Grabs the pixel at the center X coordinate for every Y row
+//    print(photo.getPixel(centerX, y));
+    columnPixels.add(photo.getPixel(centerX, y));
+  }
+  return columnPixels;
+  // Now columnPixels contains all 480 pixels from the center line
+}
+double getColorDistance(Color c1, Color c2) {
+  return sqrt(
+    pow(c1.r * 255.0.round().clamp(0, 255) - c2.r * 255.0.round().clamp(0, 255), 2) +
+    pow(c1.g * 255.0.round().clamp(0, 255) - c2.g * 255.0.round().clamp(0, 255), 2) +
+    pow(c1.b * 255.0.round().clamp(0, 255) - c2.b * 255.0.round().clamp(0, 255), 2),
+  ).toDouble();
+}
+
+ColorLabel getClosestColor(Color target, List<Color> candidates) {
+//  Color closestColor = candidates.first;
+  double minDistance = double.infinity;
+  int lindex = 0;
+  ColorLabel colorLabel;
+
+//  for (var color in candidates) {
+  for (final (index,  color) in candidates.indexed) {
+    // Calculate squared Euclidean distance in RGB space
+    // Using squared distance avoids expensive sqrt() calls for comparisons
+    double distance = pow(target.r * 255.0.round().clamp(0, 255) - color.r * 255.0.round().clamp(0, 255), 2) +
+                      pow(target.g * 255.0.round().clamp(0, 255) - color.g * 255.0.round().clamp(0, 255), 2) +
+                      pow(target.b * 255.0.round().clamp(0, 255) - color.b * 255.0.round().clamp(0, 255), 2).toDouble();
+
+    if (distance < minDistance) {
+      minDistance = distance;
+//      closestColor = color;
+      lindex = index;
+    }
+  }
+  colorLabel = ColorLabel.values[lindex];
+  return colorLabel;
+}
+
+ColorLabel matchColor(List<double> c) {
+  double bestDist = double.infinity;
+  int lindex = 0;
+  ColorLabel colorLabel;
+
+//  resistorColors.forEach((name, rgb) {
+  for (final (index,  color) in candidates.indexed) {
+    double dist = pow(c[0] - color.r * 255.0.round().clamp(0, 255), 2) +
+        pow(c[1] - color.g * 255.0.round().clamp(0, 255), 2) +
+        pow(c[2] - color.b * 255.0.round().clamp(0, 255), 2).toDouble();
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      lindex = index;
+    }
+  }
+  colorLabel = ColorLabel.values[lindex];
+  return colorLabel;
+}
+
+int calculateMedian(List<int> list) {
+
+  if (list.isEmpty) return 0;
+
+  // 2. Sort the sublist (required for median)
+  list.sort();
+
+  int middle = list.length ~/ 2;
+
+  // 3. Apply median logic
+  if (list.length % 2 == 1) {
+    // Odd length: return the middle element
+    return list[middle];
+  } else {
+    // Even length: return average of the two middle elements
+    return (list[middle - 1] + list[middle]) ~/ 2;
+  }
+}
+
+List<List<double>> extractBandColors(
+  List<List<double>> profile,
+        List<int> edges,) {
+  final colors = <List<double>>[];
+
+  for (int i = 0; i < edges.length - 1; i++) {
+    final start = edges[i];
+    final end = edges[i + 1];
+
+    double r = 0, g = 0, b = 0;
+    int count = 0;
+
+    for (int x = start; x < end; x++) {
+      r += profile[x][0];
+      g += profile[x][1];
+      b += profile[x][2];
+      count++;
+    }
+
+    colors.add([
+      r / count,
+      g / count,
+      b / count,
+    ]);
+  }
+
+  return colors;
+}
+
+List<List<double>> smoothProfile(List<List<double>> profile) {
+  const window = 5;
+  final smoothed = <List<double>>[];
+
+  for (int i = 0; i < profile.length; i++) {
+    double r = 0, g = 0, b = 0;
+    int count = 0;
+
+    for (int j = i - window; j <= i + window; j++) {
+      if (j >= 0 && j < profile.length) {
+        r += profile[j][0];
+        g += profile[j][1];
+        b += profile[j][2];
+        count++;
+      }
+    }
+
+    smoothed.add([r / count, g / count, b / count]);
+  }
+
+  return smoothed;
+}
+
+List<List<List<double>>> segmentBands(List<List<double>> profile) {
+//  const threshold = 30.0;
+  const threshold = 18.0;
+
+  final bands = <List<List<double>>>[];
+  List<List<double>> current = [profile.first];
+
+  for (int i = 1; i < profile.length; i++) {
+    final prev = profile[i - 1];
+    final curr = profile[i];
+
+    double diff = (curr[0] - prev[0]).abs() +
+                  (curr[1] - prev[1]).abs() +
+                  (curr[2] - prev[2]).abs();
+
+    if (diff > threshold) {
+      bands.add(current);
+      current = [];
+    }
+
+    current.add(curr);
+  }
+  bands.add(current);
+  return bands;
+}
+
+List<ColorLabel> orderedColors(List<List<double>> bands) {
+  return bands.map(matchColor).toList();
+}
+
+double luminance(List<double> c) {
+  return 0.299 * c[0] +
+         0.587 * c[1] +
+         0.114 * c[2];
+}
+
+double chroma(List<double> c) {
+  final maxC = [c[0], c[1], c[2]].reduce((a, b) => a > b ? a : b);
+  final minC = [c[0], c[1], c[2]].reduce((a, b) => a < b ? a : b);
+
+  return maxC - minC;
+}
+
+List<List<double>> averageBands(List<List<List<double>>> bands) {
+  return bands.map((band) {
+    double r = 0, g = 0, b = 0;
+
+    for (var p in band) {
+      r += p[0];
+      g += p[1];
+      b += p[2];
+    }
+
+    return [
+      r / band.length,
+      g / band.length,
+      b / band.length,
+    ];
+  }).toList();
+}
+
+
+*/
+/*
+  List<ColorLabel> detectedBands = await _analyzeImageForBands(decodedImage);
+
+  final pixels = extractPixels(decodedImage);
+  final clusters = kMeans(pixels, 9);
+  detectedBands = clusters.map(matchColor).toList();
+//  return detectedBands;
+  List<ColorLabel> returnedBands = detectedBands.asMap().entries
+    .where((entry) => entry.key % 2 != 0)
+    .map((entry) => entry.value)
+    .take(6)
+    .toList();
+
+  logger.d(returnedBands); // Prints a pretty-formatted list
+  return returnedBands;*/

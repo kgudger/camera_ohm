@@ -37,10 +37,9 @@ class _CameraPage extends State<CameraPage> {
     await _controller!.initialize();
     await _controller!.setFlashMode(FlashMode.auto); // was torch
     // 1. Get the min/max bounds (crucial to avoid crashes)
-    double minExposure = await _controller!.getMinExposureOffset();
+/*    double minExposure = await _controller!.getMinExposureOffset();
     double maxExposure = await _controller!.getMaxExposureOffset();
-    print("MaxExposure is $maxExposure");
-    
+    print("MaxExposure is $maxExposure");    
     // 2. Set a value within those bounds to brighten the image
     // A value of 1.0 or 2.0 is usually significantly brighter
     double brightnessValue = 0.0; 
@@ -50,6 +49,7 @@ class _CameraPage extends State<CameraPage> {
         if (!mounted) return;
 //        setState(() => _isInitialized = true);
     }
+*/
     if (!mounted) return;
     setState(() => _isInitialized = true);
   }
@@ -64,6 +64,10 @@ class _CameraPage extends State<CameraPage> {
   //  selectedColor = List.from(defaultColor);
 //    reString = "Click to get R";
     StatusService.instance.updateText(reString);
+    double screenWidth = MediaQuery.of(context).size.width;
+  // Calculate height for a 3:4 ratio
+    double targetHeight = screenWidth * (4 / 3);
+
     return Scaffold(
 //      appBar: AppBar(title: Text("Camera in Column")),
       body: Column(
@@ -83,19 +87,23 @@ class _CameraPage extends State<CameraPage> {
                 child: _isInitialized
                   ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: ClipRRect(
-/*                      borderRadius: BorderRadius.circular(15),
-                      child: CameraPreview(_controller!),
-                    ),*/
-                      child: Container(
-                        alignment: Alignment.center,
-                        child: FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            // Calculate height based on the sensor aspect ratio
-                            width: MediaQuery.of(context).size.width,
-                            height: MediaQuery.of(context).size.width / _controller!.value.aspectRatio,
-                            child: CameraPreview(_controller!),
+                    child: SizedBox(
+                      width: screenWidth,
+                      height: targetHeight,
+                      child: ClipRRect(
+  /*                      borderRadius: BorderRadius.circular(15),
+                        child: CameraPreview(_controller!),
+                      ),*/
+                        child: Container(
+                          alignment: Alignment.center,
+                          child: FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              // Calculate height based on the sensor aspect ratio
+                              width: screenWidth, //MediaQuery.of(context).size.width,
+                              height: screenWidth * _controller!.value.aspectRatio, //MediaQuery.of(context).size.width / _controller!.value.aspectRatio,
+                              child: CameraPreview(_controller!),
+                            ),
                           ),
                         ),
                       ),
@@ -121,7 +129,7 @@ class _CameraPage extends State<CameraPage> {
                 color: Colors.purple,
               ),
               Positioned(
-                top: 10, // Distance from the top
+                top: 25, // Distance from the top
                 left: 0,
                 right: 0,
                 child: Stack(
