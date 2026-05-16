@@ -1,5 +1,6 @@
-import 'package:camera_ohm/main.dart';
+//import 'package:camera_ohm/main.dart';
 import 'dart:math';
+import '../function_files/color_label.dart';
 
 String reString = "Select Colors";
 

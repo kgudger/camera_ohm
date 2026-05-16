@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:collection/collection.dart';
+//import 'package:collection/collection.dart';
 //import 'dart:math';
 import 'package:camera_ohm/function_files/calculate_r.dart';
 import 'package:camera_ohm/function_files/enter_page.dart';
 import 'package:camera_ohm/function_files/camera_page.dart';
+import '../function_files/color_label.dart';
 
 void main() {
 runApp(const CamerOhmApp());
@@ -141,43 +142,6 @@ class DialogHelper {
   }
 }
 
-List<ColorLabel?> selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
-final List<ColorLabel?> defaultColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
-
-typedef ColorEntry = DropdownMenuEntry<ColorLabel>;
-
-// DropdownMenuEntry labels and values for the dropdown menu.
-enum ColorLabel {
-  black('Black',  Colors.black),
-  brown('Brown',  Colors.brown),
-  red('Red', Colors.red),
-  orange('Orange', Colors.orange),
-  yellow('Yellow', Colors.yellow),
-  green('Green', Colors.green),
-  blue('Blue', Colors.blue),
-  pink('Violet', Colors.purple),
-  grey('Grey', Colors.grey),
-  white('White', Colors.white),
-  gold('Gold', Colors.amber),
-  silver('Silver', Color.fromARGB(0xFF, 0xC0, 0xC0, 0xC0)),
-  none('None', Colors.black);
-
-  const ColorLabel(this.label, this.color);
-  final String label;
-  final Color color;
-
-  static final List<ColorEntry> entries = UnmodifiableListView<ColorEntry>(
-    values.map<ColorEntry>(
-      (ColorLabel color) => ColorEntry(
-        value: color,
-        label: color.label,
-        enabled: color.label != 'Indigo',
-        style: MenuItemButton.styleFrom(foregroundColor: color.color),
-      ),
-    ),
-  );
-}
-
 class StatusService {
   // Singleton setup
   StatusService._internal();
@@ -191,3 +155,4 @@ class StatusService {
     sharedText.value = newValue;
   }
 }
+

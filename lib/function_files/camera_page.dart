@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_ohm/main.dart';
 import 'package:camera_ohm/function_files/cam_calc.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+//import 'package:path_provider/path_provider.dart';
+//import 'dart:io';
 import 'package:logger/logger.dart';
+import '../function_files/color_label.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -201,18 +202,18 @@ class _CameraPage extends State<CameraPage> {
                             if (image != null) {
 //                              final directory = Directory('/storage/emulated/0/Download');
                             //  final directory = Directory('/mnt/chromeos/MyFiles/Downloads');
-                              final Directory? directory = await getDownloadsDirectory();// 
+/*                              final Directory? directory = await getDownloadsDirectory();// 
                               if (directory != null) {
                               //final directory = await getApplicationDocumentsDirectory();
                                 final File localImage = await File(image.path).copy('${directory.path}/captured_image.png');
                                 logger.d(directory.path); 
 //                              if (context.mounted) DialogHelper.showAlertDialog(context, directory.path);
-                              }
-                            }
-                              selectedColor = await getResistorColors(image!);
+                              }*/
+                              selectedColor = await getResistorColors(image);
                               calculateR();
                               StatusService.instance.updateText(" $reString");                          
 //                            print('Image captured at: ${image.path}');
+                            }
                           } catch (e) {
                           // If an error occurs, log the error to the console.
 //                            print(e);

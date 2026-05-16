@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
-import 'package:camera_ohm/main.dart';
+//import 'package:camera_ohm/main.dart';
 import 'dart:math';
 import 'package:logger/logger.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
+import 'color_label.dart';
 
 Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
   var logger = Logger();
@@ -18,15 +19,15 @@ Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
   img.Image? decodedImage = img.decodeImage(bytes);
 
   if (decodedImage == null) return [ColorLabel.none];
-  
+  saveImage(decodedImage, 0);
   decodedImage = cropCenter(decodedImage); // Crop to most important part
-  saveImage(decodedImage,0);
+  saveImage(decodedImage,1);
     // 2. White balance correction
   decodedImage = normalizeWhiteBalance(decodedImage);
-  saveImage(decodedImage,1);
-  
-  decodedImage = blurImage(decodedImage);
   saveImage(decodedImage,2);
+  
+  //decodedImage = blurImage(decodedImage); // no blur
+  //saveImage(decodedImage,3);
 
   final (hsvprofile, rgbProfile) = horizontalProfile(decodedImage); 
     // now it's HSV and RGB
@@ -38,8 +39,9 @@ Future<List<ColorLabel?>> getResistorColors(XFile capturedImage) async {
   final bandColorsHsv = profileHsv.map(classifyColor).toList();
   final bandColors = profileHsv.map(classifyHSV).toList();
   logger.d(bandColorsHsv);
+  logger.d(bandColors);
 
-  final filtered = filterBands(bandColors);
+  final filtered = filterBands(bandColorsHsv);
   logger.d(filtered);
 
   final ordered = (filtered);
@@ -166,7 +168,7 @@ List<double> transitionProfile(List<List<double>> profile) {
 }
 
 List<int> detectEdges(List<double> transitions) {
-  const threshold = 15.0;
+  const threshold = 20.0;
   const delta = 10 ; // distance across edge to detect for real
 
   final edges = <int>[];
@@ -190,9 +192,48 @@ List<int> detectEdges(List<double> transitions) {
 
 List<ColorLabel> filterBands(List<ColorLabel> bands) {
   // Keep largest color changes (heuristic)
-  if (bands.length <= 6) return bands;
+  if (bands.length <= 2) return []; // short list just returns list
 
-  return bands.sublist(0, 6); // simple fallback
+  // Count occurrences
+  final counts = <ColorLabel, int>{};
+  for (final color in bands) {
+    counts[color] = (counts[color] ?? 0) + 1;
+  }
+  // Find most common color(s)
+  int maxCount = 0;
+  for (final count in counts.values) {
+    if (count > maxCount) {
+      maxCount = count;
+    }
+  }
+  final mostCommon = counts.entries
+      .where((e) => e.value == maxCount)
+      .map((e) => e.key)
+      .toSet();
+
+  final result = <ColorLabel>[];
+
+  ColorLabel? previous;
+  // Ignore first and last bands
+  final trimmed = bands.sublist(1, bands.length - 1);
+
+  for (final color in trimmed) {
+    // Ignore dominant background colors
+    if (mostCommon.contains(color)) {
+      continue;
+    }
+    // Collapse duplicates
+    if (previous == color) {
+      continue;
+    }
+    result.add(color);
+    previous = color;
+  }
+
+
+  if (result.length <= 6) return result;
+
+  return result.sublist(0, 6); // simple fallback
 }
 
 Future<void> saveHSVListToImage(
@@ -302,10 +343,19 @@ ColorLabel classifyColor(List<double> hsv) {
   final v = hsv[2];
 
   if (v < 0.12) return ColorLabel.values[0]; //"black";
+
   if (s < 0.15) {
-    if (v > 0.75) return ColorLabel.values[9];//"white";
-    return ColorLabel.values[8];//"gray";
+  // Silver: bright low-saturation metallic gray
+    if (v >= 0.55 && v < 0.6) { // ChatGPT used .82
+      print("HSV Silver = $hsv");
+      return ColorLabel.values[11]; // silver
+    }
+    if (v >= 0.6) {  // ChatGPT used .82
+      return ColorLabel.values[9]; // white
+    }
+    return ColorLabel.values[8]; // gray
   }
+  
   if (h < 15 || h > 345) return ColorLabel.values[2];// "red";
   if (h >= 15 && h < 45) {
     // Brown = darker orange
@@ -325,8 +375,13 @@ ColorLabel classifyColor(List<double> hsv) {
   if (h >= 260 && h < 320) return ColorLabel.values[7]; "violet";
 
   return ColorLabel.values[12]; // none;
+  /*
+  You may want to tune the thresholds depending on your camera pipeline:
+Increase silver lower bound (v >= 0.6) if too many grays become silver.
+Lower white threshold (v >= 0.8) if silver becomes white too often.
+  */
 }
-
+/*
 List<List<double>> averageHsvSegments(
   List<List<double>> profile,
   List<int> edges,
@@ -385,6 +440,97 @@ List<List<double>> averageHsvSegments(
 
     final avgS = sumS / count;
     final avgV = sumV / count;
+
+    segments.add([
+      avgHue,
+      avgS,
+      avgV,
+    ]);
+  }
+
+  return segments;
+}*/
+
+List<List<double>> averageHsvSegments( // new one from ChatGPT
+  List<List<double>> profile,
+  List<int> edges,
+) {
+  final segments = <List<double>>[];
+
+  if (edges.length < 2) return segments;
+
+  for (int i = 0; i < edges.length - 1; i++) {
+    int start = edges[i];
+    int end = edges[i + 1];
+
+    if (end <= start) continue;
+
+    // Ignore noisy edge-transition pixels
+    const edgeTrim = 2;
+
+    start += edgeTrim;
+    end -= edgeTrim;
+
+    if (end <= start) continue;
+
+    double sumX = 0;
+    double sumY = 0;
+
+    double weightedS = 0;
+    double weightedV = 0;
+    double totalWeight = 0;
+
+    int count = 0;
+
+    for (int x = start; x < end; x++) {
+      if (x < 0 || x >= profile.length) continue;
+
+      final hsv = profile[x];
+
+      final h = hsv[0];
+      final s = hsv[1];
+      final v = hsv[2];
+
+      // Ignore extremely dark pixels
+      if (v < 0.08) continue;
+
+      // Weight colorful bright pixels more strongly
+      final weight = (s * s) * (0.5 + v * 0.5);
+
+      // Only contribute hue if saturation meaningful
+      if (s > 0.08) {
+        final radians = h * pi / 180.0;
+
+        sumX += cos(radians) * weight;
+        sumY += sin(radians) * weight;
+      }
+
+      weightedS += s * weight;
+      weightedV += v * weight;
+
+      totalWeight += weight;
+      count++;
+    }
+
+    if (count == 0 || totalWeight <= 0) continue;
+
+    double avgHue;
+
+    // If hue vector nearly vanished, segment is neutral
+    final hueMagnitude = sqrt(sumX * sumX + sumY * sumY);
+
+    if (hueMagnitude < 0.001) {
+      avgHue = 0;
+    } else {
+      avgHue = atan2(sumY, sumX) * 180.0 / pi;
+
+      if (avgHue < 0) {
+        avgHue += 360;
+      }
+    }
+
+    final avgS = weightedS / totalWeight;
+    final avgV = weightedV / totalWeight;
 
     segments.add([
       avgHue,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera_ohm/function_files/calculate_r.dart';
-import 'package:camera_ohm/main.dart';
+//import 'package:camera_ohm/main.dart';
+import '../function_files/color_label.dart';
 
 class EnterPage extends StatefulWidget {
   const EnterPage({super.key});
