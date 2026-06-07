@@ -32,7 +32,6 @@ class _CameraPage extends State<CameraPage> {
     
     final cameras = await availableCameras();
     if (cameras.isEmpty) return;
-
     // 2. Initialize controller with the first camera
     _controller = CameraController(cameras[0], ResolutionPreset.medium);
     await _controller!.initialize();
@@ -209,7 +208,7 @@ class _CameraPage extends State<CameraPage> {
                                 logger.d(directory.path); 
 //                              if (context.mounted) DialogHelper.showAlertDialog(context, directory.path);
                               }*/
-                              selectedColor = await getResistorColors(image);
+                              final(selectedColor, mids) = await getResistorColors(image);
                               calculateR();
                               StatusService.instance.updateText(" $reString");                          
 //                            print('Image captured at: ${image.path}');

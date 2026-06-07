@@ -1,6 +1,5 @@
 import 'package:image/image.dart' as img;
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'package:camera_ohm/function_files/cam_calc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logger/logger.dart';
