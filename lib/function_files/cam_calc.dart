@@ -11,7 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'color_label.dart';
 // need math package.
 
-Future<(List<ColorLabel?>, List<int>)> getResistorColors(XFile capturedImage) async {
+Future<(List<ColorLabel?>, List<int>, List<String>)> getResistorColors(XFile capturedImage) async {
   var logger = Logger();
 
   logger.d(capturedImage.path);
@@ -20,7 +20,7 @@ Future<(List<ColorLabel?>, List<int>)> getResistorColors(XFile capturedImage) as
   final bytes = await capturedImage.readAsBytes();
   img.Image? decodedImage = img.decodeImage(bytes);
 
-  if (decodedImage == null) return [ColorLabel.none];
+  if (decodedImage == null) return ([ColorLabel.none], <int>[],["none"]);//return ([ColorLabel.none],List<int>);
   saveImage(decodedImage, 0);
   decodedImage = cropCenter(decodedImage); // Crop to most important part
   saveImage(decodedImage,1);
@@ -47,20 +47,22 @@ Future<(List<ColorLabel?>, List<int>)> getResistorColors(XFile capturedImage) as
   logger.d("Average == ${profileHsv.length}");
 //  final profileHsv2 = mergeRegions(profileHsv);
 //  logger.d("Average2 == ${profileHsv2.length}");
-  final bandColorsHsv = profileHsv.map(classifyColor).toList();
+  final bandColorsHsv = profileHsv.map(classifyColor).toList(); // list of ColorLabels
 //  logger.d("2nd");
 //  final bandColorsHsv2 = profileHsv2.map(classifyColor).toList();
   final bandColorsHsv2 = profileHsv.map(classifyKnn).toList();
   logger.d("hsv = $bandColorsHsv");
   logger.d("hsv2 = $bandColorsHsv2");
+  List<String> colorNames = bandColorsHsv2.map((color) => color.name).toList();
+  logger.d("color names = $colorNames");
 //  logger.d(bandColors);
   final filtered2 = filterBands(bandColorsHsv2);
   logger.d("new filter = $filtered2");
   final filtered = filterBands(bandColorsHsv);
-//  logger.d(filtered);
+  logger.d(filtered);
 
   final ordered = (filtered);
-  return (ordered, mids);
+  return (ordered, mids, colorNames);
 }
 
 List<Color> candidates = ColorLabel.values.map((e) => e.color).toList(); 

@@ -18,6 +18,8 @@ class _CameraPage extends State<CameraPage> {
   CameraController? _controller;
   bool _isInitialized = false;
   var logger = Logger();
+  List<int> mids = [];
+  List<String> colorNames = [];
 
   @override
   void initState() {
@@ -67,7 +69,9 @@ class _CameraPage extends State<CameraPage> {
     double screenWidth = MediaQuery.of(context).size.width;
   // Calculate height for a 3:4 ratio
     double targetHeight = screenWidth * (4 / 3);
-
+    double imageHeight = _isInitialized
+      ? screenWidth * _controller!.value.aspectRatio
+      : targetHeight;
     return Scaffold(
 //      appBar: AppBar(title: Text("Camera in Column")),
       body: Column(
@@ -128,6 +132,42 @@ class _CameraPage extends State<CameraPage> {
                 height: 400,
                 color: Colors.purple,
               ),
+              // Color Labels
+              ...List.generate(colorNames.length, (i) {
+                return Positioned(
+                  top: mids[i] + imageHeight * 0.20,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Stack(
+                      children: [
+                        // Outline text
+                        Text(
+                          colorNames[i],
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            foreground: Paint()
+                              ..style = PaintingStyle.stroke
+                              ..strokeWidth = 2
+                              ..color = Colors.black,
+                          ),
+                        ),
+
+                        // Filled text
+                        Text(
+                          colorNames[i],
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
               Positioned(
                 top: 25, // Distance from the top
                 left: 0,
@@ -208,7 +248,13 @@ class _CameraPage extends State<CameraPage> {
                                 logger.d(directory.path); 
 //                              if (context.mounted) DialogHelper.showAlertDialog(context, directory.path);
                               }*/
-                              final(selectedColor, mids) = await getResistorColors(image);
+                              final(returnedColor, newMids, newColorNames) = await getResistorColors(image);
+                              setState(() {
+                                selectedColor = returnedColor;
+                                mids = newMids;
+                                colorNames = newColorNames;
+                              });
+//                              selectedColor = returnedColor;
                               calculateR();
                               StatusService.instance.updateText(" $reString");                          
 //                            print('Image captured at: ${image.path}');

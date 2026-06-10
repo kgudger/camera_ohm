@@ -37,7 +37,9 @@ Future<void> analyzeImage() async {
     print('Image decoded! Resolution: ${decodedImage.width}x${decodedImage.height}');
   }
   List<ColorLabel?> selectedColor;
-  selectedColor = await getResistorColors(xFile);
+  List<int> mids = [];
+  List<String> colorNames = [];
+  (selectedColor, mids, colorNames) = await getResistorColors(xFile);
   logger.d(selectedColor);
 }
 
