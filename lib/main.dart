@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:camera_ohm/function_files/calculate_r.dart';
 import 'package:camera_ohm/function_files/enter_page.dart';
 import 'package:camera_ohm/function_files/camera_page.dart';
+import 'package:camera_ohm/function_files/help_page.dart';
 import '../function_files/color_label.dart';
 
 void main() {
@@ -41,7 +42,7 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-bool _isExpanded = false;
+int _isExpanded = 1; // Enter page
 
 class _MyHomePageState extends State<MyHomePage> {
   String _buttonText = "Camera Mode";
@@ -51,12 +52,18 @@ class _MyHomePageState extends State<MyHomePage> {
     Widget colmn;
   //  selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
     switch (_isExpanded) {
-      case true:
+      case 0:
         colmn = CameraPage();
         break;
-      case false:
+      case 1:
         colmn = EnterPage();
         break;
+      case 2:
+        colmn = HelpPage();
+        break;
+      default:
+        colmn = EnterPage();
+      break;
     }
 
     return LayoutBuilder(
@@ -78,7 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       onPressed: () {
                       // Update state on click
                         setState(() {
-                          _isExpanded = !_isExpanded;
+                          _isExpanded = (_isExpanded == 1) ? 0 : 1;
                           if (_buttonText == "Camera Mode") {
                             _buttonText = "Enter Color Mode";
                           } else {
@@ -92,8 +99,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     SizedBox(width: 20),
                     ElevatedButton(
-                      onPressed: () {},
                       child: const Text('Help'),
+                      onPressed: () {
+                        setState(() {
+                          _isExpanded = 2;
+                          _buttonText = "Exit Help";
+                        });
+                      },
                     ),             
                   ],
                 ),
