@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 //import 'dart:math';
 import 'package:camera_ohm/function_files/calculate_r.dart';
 import 'package:camera_ohm/function_files/enter_page.dart';
-import 'package:camera_ohm/function_files/camera_page.dart';
+//import 'package:camera_ohm/function_files/camera_page.dart';
 import 'package:camera_ohm/function_files/help_page.dart';
-import '../function_files/color_label.dart';
+//import '../function_files/color_label.dart';
 
 void main() {
 runApp(const CamerOhmApp());
@@ -20,11 +20,11 @@ class CamerOhmApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
-        title: 'CamerOhm',
+        title: 'OhmOhm',
         theme: ThemeData(
           colorScheme: .fromSeed(seedColor: Colors.deepPurple),
         ),
-      home: const MyHomePage(title: 'CamerOhm Page'),
+      home: const MyHomePage(title: 'OhmOhm Page'),
       )
     );
   }
@@ -45,19 +45,13 @@ class MyHomePage extends StatefulWidget {
 int _isExpanded = 1; // Enter page
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _buttonText = "Camera Mode";
+  String _buttonText = "Help";
   @override
 
   Widget build(BuildContext context) {
     Widget colmn;
   //  selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
     switch (_isExpanded) {
-      case 0:
-        colmn = CameraPage();
-        break;
-      case 1:
-        colmn = EnterPage();
-        break;
       case 2:
         colmn = HelpPage();
         break;
@@ -74,30 +68,26 @@ class _MyHomePageState extends State<MyHomePage> {
   //        mainAxisAlignment: .center,
               children: [
                 const SizedBox(height: 40),  
-                const Text('Welcome to CamerOhm!'),
+                const Text('Resistor Calculator'),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ElevatedButton(
-/*                      onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                      child: const Text('Toggle Mode'),*/
                       child: Text(_buttonText),
                       onPressed: () {
                       // Update state on click
                         setState(() {
-                          _isExpanded = (_isExpanded == 1) ? 0 : 1;
-                          if (_buttonText == "Camera Mode") {
-                            _buttonText = "Enter Color Mode";
+                          _isExpanded = (_isExpanded == 1) ? 2 : 1;
+                          if (_buttonText == "Help") {
+                            _buttonText = "Exit Help";
                           } else {
-                            _buttonText = "Camera Mode";
+                            _buttonText = "Help";
                           }
-                          selectedColor = List.from(defaultColor);
-                          reString = "Click to get R";
                         });
                       },
 
                     ),
-                    SizedBox(width: 20),
+/*                    SizedBox(width: 20),
                     ElevatedButton(
                       child: const Text('Help'),
                       onPressed: () {
@@ -107,7 +97,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         });
                       },
                     ),             
-                  ],
+*/                  ],
                 ),
                 Expanded(
                   child: Container(

@@ -28,6 +28,6 @@ class _HelpPage extends State<HelpPage> {
       ),
     );
   }
-  String helpText = 'In "Enter Color Mode" use the drop down boxes to enter the colors, starting from the end farthest from the tolerance band. "Camera Mode" uses the camera to try and guess the colors on the resistor. Make sure the resistor is oriented with the tolerance band at the bottom and the resistor center aligned inside the box.';
+  String helpText = 'In "Enter Color Mode" use the drop down boxes to enter the colors, starting from the end farthest from the tolerance band. ';
 }
 
