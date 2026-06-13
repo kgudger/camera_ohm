@@ -6,6 +6,7 @@ import 'package:camera_ohm/function_files/calculate_r.dart';
 import 'package:camera_ohm/function_files/enter_page.dart';
 //import 'package:camera_ohm/function_files/camera_page.dart';
 import 'package:camera_ohm/function_files/help_page.dart';
+import 'package:camera_ohm/function_files/value_page.dart';
 //import '../function_files/color_label.dart';
 
 void main() {
@@ -45,7 +46,7 @@ class MyHomePage extends StatefulWidget {
 int _isExpanded = 1; // Enter page
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _buttonText = "Help";
+  String _buttonText = "Enter Mode";
   @override
 
   Widget build(BuildContext context) {
@@ -54,6 +55,9 @@ class _MyHomePageState extends State<MyHomePage> {
     switch (_isExpanded) {
       case 2:
         colmn = HelpPage();
+        break;
+      case 0:
+        colmn = ValuePage();
         break;
       default:
         colmn = EnterPage();
@@ -77,17 +81,18 @@ class _MyHomePageState extends State<MyHomePage> {
                       onPressed: () {
                       // Update state on click
                         setState(() {
-                          _isExpanded = (_isExpanded == 1) ? 2 : 1;
-                          if (_buttonText == "Help") {
-                            _buttonText = "Exit Help";
+                          _isExpanded = (_isExpanded == 1) ? 0 : 1;
+                          if (_buttonText == "Value Mode") {
+                            _buttonText = "Enter Color Mode";
                           } else {
-                            _buttonText = "Help";
+                            _buttonText = "Value Mode";
                           }
+                          reString = "Click to get R";
                         });
                       },
 
                     ),
-/*                    SizedBox(width: 20),
+                    SizedBox(width: 20),
                     ElevatedButton(
                       child: const Text('Help'),
                       onPressed: () {
@@ -97,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         });
                       },
                     ),             
-*/                  ],
+                  ],
                 ),
                 Expanded(
                   child: Container(
