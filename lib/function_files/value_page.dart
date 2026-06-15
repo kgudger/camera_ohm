@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../function_files/color_label.dart';
+import 'dart:math';
 
 class ValuePage extends StatefulWidget {
   const ValuePage({super.key});
@@ -10,7 +10,7 @@ class _ValuePage extends State<ValuePage> {
   final TextEditingController _controller = TextEditingController();
 
   String output1 = '';
-  String output2 = '';
+  String output2 = '\n';
 
   void updateOutputs(String input) {
     final (result, standard) = calcColors(input);
@@ -41,7 +41,7 @@ class _ValuePage extends State<ValuePage> {
             TextField(
               controller: _controller,
               decoration: const InputDecoration(
-                labelText: 'Enter text',
+                labelText: 'Enter Resistor Value',
                 border: OutlineInputBorder(),
               ),
               onSubmitted: updateOutputs,
@@ -74,6 +74,7 @@ class _ValuePage extends State<ValuePage> {
             TextField(
               controller: TextEditingController(text: output2),
               readOnly: true,
+              maxLines: null,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
               ),
@@ -91,19 +92,22 @@ class _ValuePage extends State<ValuePage> {
   if (parsed == null) {
     return ('', '');
   }
+  List<double> rValues = e12;
+  final tolerance = parseTolerance(parsed.remainder);
+  if (tolerance <= 0.05) {
+    rValues = e24;
+  }
+  final standardSize = roundToSeries(parsed.number, rValues);
   final colors = computeBands(parsed);
-  final digitValues = parsed.number
-    .toString()
-    .replaceAll('.', '')
-    .split('')
-    .map(int.parse)
-    .toList();
-  final p = parseDigits(parsed.number);
-//  final colors = digitsToColors(p.digits);
+  final newParsed = ParsedInput(standardSize,parsed.text,parsed.remainder);
+  final standardColors = computeBands(newParsed);
   String result = colors.join(', ');
-//  final value = 0.0;
-  
-  return (result, "");
+  String result1 =   '''Requested: ${formatOhms(parsed)},
+Nearest: ${formatOhms(newParsed)}''';
+  String result2 = standardColors.join(', ');
+  String resultAll = '''$result1
+$result2''';
+  return (result, resultAll);
 }
 
 List<String> computeBands(ParsedInput p) {
@@ -136,23 +140,54 @@ class ParsedInput {
 }
 
 ParsedInput? parseInput(String input) {
-  final regex = RegExp(
-    r'^\s*(\d+(?:\.\d+)?)(?:\s*([^\s]+))?(?:\s+(.*))?$',
-  );
+  final numberMatch =
+      RegExp(r'^\s*(\d+(?:\.\d+)?)').firstMatch(input);
 
-  final match = regex.firstMatch(input);
-
-  if (match == null) {
+  if (numberMatch == null) {
     return null;
   }
 
+  final number =
+      double.parse(numberMatch.group(1)!);
+
+  String remaining =
+      input.substring(numberMatch.end).trim();
+
+  String? text;
+  String? remainder;
+
+  if (remaining.isNotEmpty) {
+    final tokens = remaining.split(RegExp(r'\s+'));
+
+    if (tokens.isNotEmpty) {
+      // First token after the number
+      final first = tokens[0];
+
+      // Unit/multiplier?
+      if (RegExp(
+        r'^(k|K|m|M|g|G|ohm|ohms|Ω|r|R)$',
+      ).hasMatch(first)) {
+        text = first;
+
+        if (tokens.length > 1) {
+          remainder =
+              tokens.sublist(1).join(' ');
+        }
+      } else {
+        // No unit found
+        remainder = remaining;
+      }
+    }
+  }
+
   return ParsedInput(
-    double.parse(match.group(1)!),
-    match.group(2),
-    match.group(3) ?? '',
+    number,
+    text,
+    remainder,
   );
 }
 
+/*
 class ParsedNumber {
   final List<int> digits;
   final int decimalPosition;
@@ -178,7 +213,7 @@ ParsedNumber parseDigits(double value) {
     decimalPosition,
   );
 }
-
+*/
 List<String> digitsToColors(List<int> digits) {
   return digits
       .map((d) => digitColors[d])
@@ -323,20 +358,100 @@ String toleranceToColor(double t) {
   return "";
 }
 
-/* Standard Resistor Values*/
-const standardValues = <int>[
-10,
-12,
-15,
-18,
-22,
-27,
-33,
-39,
-47,
-56,
-68,
-82,
-];
 
+double roundToSeries(
+  double value,
+  List<double> series,
+) {
+  if (value <= 0) return value;
+
+  // Normalize to 1 ≤ mantissa < 10
+  int exponent = 0;
+  double mantissa = value;
+
+  while (mantissa >= 10) {
+    mantissa /= 10;
+    exponent++;
+  }
+
+  while (mantissa < 1) {
+    mantissa *= 10;
+    exponent--;
+  }
+
+  // Find nearest preferred value
+  double best = series.first;
+  double bestError =
+      (mantissa - best).abs();
+
+  for (final candidate in series) {
+    final error =
+        (mantissa - candidate).abs();
+
+    if (error < bestError) {
+      best = candidate;
+      bestError = error;
+    }
+  }
+
+  return best * pow(10, exponent);
+}
+/*
+String nearestSeriesString(
+  ParsedInput p,
+  List<double> series,
+) {
+  final unitMultiplier = switch (p.text?.toLowerCase()) {
+    'k' => 1e3,
+    'm' => 1e6,
+    _ => 1.0,
+  };
+
+  final actualValue = p.number * unitMultiplier;
+
+  final result = roundToSeries(
+    actualValue,
+    series,
+  );
+
+  return 'Requested: ${formatOhms(result.requestedValue)}, '
+         'Nearest: ${formatOhms(result.closestValue)}';
+}
+*/
+String formatOhms(ParsedInput p) {
+  if (p.number >= 1e9) {
+    return '${(p.number / 1e9).toStringAsFixed(2)}  ${p.text ?? ''} GΩ ${p.remainder ?? ''}';
+  }
+
+  if (p.number >= 1e6) {
+    return '${(p.number / 1e6).toStringAsFixed(2)}  ${p.text ?? ''} MΩ ${p.remainder ?? ''}';
+  }
+
+  if (p.number >= 1e3) {
+    return '${(p.number / 1e3).toStringAsFixed(2)}  ${p.text ?? ''} kΩ ${p.remainder ?? ''}';
+  }
+
+  return '${p.number.toStringAsFixed(2)} ${p.text ?? ''} Ω ${p.remainder ?? ''}';
+}
+
+/* Standard Resistor Values*/
+const e12 = [ // 10% tolerance
+  1.0,
+  1.2,
+  1.5,
+  1.8,
+  2.2,
+  2.7,
+  3.3,
+  3.9,
+  4.7,
+  5.6,
+  6.8,
+  8.2,
+];
+const e24 = [ // 5% tolerance (or less)
+  1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0,
+  2.2, 2.4, 2.7, 3.0, 3.3, 3.6, 3.9, 4.3,
+  4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1,
+];
 

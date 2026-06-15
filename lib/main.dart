@@ -46,7 +46,7 @@ class MyHomePage extends StatefulWidget {
 int _isExpanded = 1; // Enter page
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _buttonText = "Enter Mode";
+  String _buttonText = "Enter Color Mode";
   @override
 
   Widget build(BuildContext context) {
@@ -82,10 +82,10 @@ class _MyHomePageState extends State<MyHomePage> {
                       // Update state on click
                         setState(() {
                           _isExpanded = (_isExpanded == 1) ? 0 : 1;
-                          if (_buttonText == "Value Mode") {
+                          if (_buttonText == "Enter Value Mode") {
                             _buttonText = "Enter Color Mode";
                           } else {
-                            _buttonText = "Value Mode";
+                            _buttonText = "Enter Value Mode";
                           }
                           reString = "Click to get R";
                         });

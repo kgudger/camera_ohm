@@ -28,6 +28,9 @@ class _HelpPage extends State<HelpPage> {
       ),
     );
   }
-  String helpText = 'In "Enter Color Mode" use the drop down boxes to enter the colors, starting from the end farthest from the tolerance band. ';
+  String helpText = '''In "Enter Color Mode" use the drop down boxes to enter the colors, starting from the end farthest from the tolerance band.
+In Enter Value mode enter the resistor value in the text box to get the colors for that value.
+Example: 1.2K 10%
+The bottom text area will show the nearest standard resistor value to your request.''';
 }
 
