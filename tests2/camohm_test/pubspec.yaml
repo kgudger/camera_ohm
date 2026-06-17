@@ -23,6 +23,7 @@ dependencies:
     path: ../../
   flutter:
     sdk: flutter
+  flutter_markdown_plus: ^1.0.7
   provider: ^6.1.5
   flutter_test_ui: ^2.0.0
 dev_dependencies:

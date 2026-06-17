@@ -19,11 +19,15 @@ void calculateR() {
     return;
   }
 
-  if (c0.index == 0 || c0.index > 9 || c1.index > 9 || c2.index > 9) {
+  if (c0.index == 0 || c0.index > 9 || c1.index > 9 || c2.index >11) {
     reString = defaultString;
     return;
   }
-
+  if (c3!.index < 12 && c2.index > 9){
+    reString = defaultString;
+    return;
+  }
+  
   double totalR = c0.index * 10 + c1.index.toDouble();
   int multiplier = c2.index;
   int decimals = 1;

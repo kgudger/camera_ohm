@@ -394,7 +394,7 @@ double roundToSeries(
     }
   }
 
-  return best * pow(10, exponent);
+  return (best * pow(10, exponent)).roundToDouble();
 }
 /*
 String nearestSeriesString(

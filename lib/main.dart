@@ -7,7 +7,7 @@ import 'package:camera_ohm/function_files/enter_page.dart';
 //import 'package:camera_ohm/function_files/camera_page.dart';
 import 'package:camera_ohm/function_files/help_page.dart';
 import 'package:camera_ohm/function_files/value_page.dart';
-//import '../function_files/color_label.dart';
+import 'package:camera_ohm/function_files/calc_page.dart';
 
 void main() {
 runApp(const CamerOhmApp());
@@ -46,7 +46,13 @@ class MyHomePage extends StatefulWidget {
 int _isExpanded = 1; // Enter page
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _buttonText = "Enter Color Mode";
+  String _buttonText = "Help";
+  final List<String> _pageNames = [
+  'Enter Value Mode',
+  'Enter Color Mode',
+  'Calculate Values Mode',
+  'Help'
+];
   @override
 
   Widget build(BuildContext context) {
@@ -54,10 +60,13 @@ class _MyHomePageState extends State<MyHomePage> {
   //  selectedColor = [ColorLabel.black, ColorLabel.black, ColorLabel.black, ColorLabel.none, ColorLabel.none, ColorLabel.none, ColorLabel.none];
     switch (_isExpanded) {
       case 2:
-        colmn = HelpPage();
+        colmn = CalcPage();
         break;
       case 0:
         colmn = ValuePage();
+        break;
+      case 3:
+        colmn = HelpPage();
         break;
       default:
         colmn = EnterPage();
@@ -76,32 +85,41 @@ class _MyHomePageState extends State<MyHomePage> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ElevatedButton(
-                      child: Text(_buttonText),
-                      onPressed: () {
-                      // Update state on click
+                    DropdownButton<int>(
+                      value: (_isExpanded <= 2) ? _isExpanded : null,
+                      hint: const Text('Select Mode'),
+                      items: List.generate(
+                        3, // doesn't include Help
+                        (index) => DropdownMenuItem<int>(
+                          value: index,
+                          child: Text(_pageNames[index]),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        if (value == null) return;
                         setState(() {
-                          _isExpanded = (_isExpanded == 1) ? 0 : 1;
-                          if (_buttonText == "Enter Value Mode") {
-                            _buttonText = "Enter Color Mode";
-                          } else {
-                            _buttonText = "Enter Value Mode";
-                          }
-                          reString = "Click to get R";
+                          _buttonText = "Help";
+                          _isExpanded = value;
+                          reString = "Select Colors to get R";
                         });
                       },
-
                     ),
                     SizedBox(width: 20),
                     ElevatedButton(
-                      child: const Text('Help'),
+                      child: Text(_buttonText),
                       onPressed: () {
                         setState(() {
-                          _isExpanded = 2;
-                          _buttonText = "Exit Help";
+                          if (_isExpanded != 3){
+                            _isExpanded = 3;
+                            _buttonText = "Exit Help";
+                          }
+                          else {
+                            _isExpanded = 1;
+                            _buttonText = "Help";
+                          }
                         });
                       },
-                    ),             
+                    ),
                   ],
                 ),
                 Expanded(
