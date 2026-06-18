@@ -147,9 +147,10 @@ ParsedInput? parseInput(String input) {
     return null;
   }
 
-  final number =
-      double.parse(numberMatch.group(1)!);
-
+  final number = roundToSigDigits(
+    double.parse(numberMatch.group(1)!),
+    3,
+);
   String remaining =
       input.substring(numberMatch.end).trim();
 
@@ -187,33 +188,15 @@ ParsedInput? parseInput(String input) {
   );
 }
 
-/*
-class ParsedNumber {
-  final List<int> digits;
-  final int decimalPosition;
-
-  ParsedNumber(this.digits, this.decimalPosition);
-}
-
-ParsedNumber parseDigits(double value) {
-  final s = value.toString();
-
-  final decimalPosition = s.contains('.')
-      ? s.indexOf('.')
-      : s.length;
-
-  final digits = s
-      .replaceAll('.', '')
-      .split('')
-      .map(int.parse)
-      .toList();
-
-  return ParsedNumber(
-    digits,
-    decimalPosition,
+double roundToSigDigits(
+  double value,
+  int digits,
+) {
+  return double.parse(
+    value.toStringAsPrecision(digits),
   );
 }
-*/
+
 List<String> digitsToColors(List<int> digits) {
   return digits
       .map((d) => digitColors[d])
@@ -393,8 +376,10 @@ double roundToSeries(
       bestError = error;
     }
   }
-
-  return (best * pow(10, exponent)).roundToDouble();
+  final bestFinal = best * pow(10, exponent);
+  final bestRound = double.parse(
+    bestFinal.toStringAsFixed(6),);
+  return (bestRound);
 }
 /*
 String nearestSeriesString(

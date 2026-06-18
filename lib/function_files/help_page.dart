@@ -42,6 +42,8 @@ The top text box shows the resistance value for the colors you entered. The bott
 
 The bottom text area will show the nearest standard resistor value to your request.
 
-In **Calculate Values Mode** enter any 2 of Voltage, Current, Resistance, Watts on the left side and all 4 values are calculated and shown on the right side.''';   
+In **Calculate Values Mode** enter any 2 of Voltage, Current, Resistance, Watts on the left side and all 4 values are calculated and shown on the right side.
+
+Version 1.0''';   
 }
 
