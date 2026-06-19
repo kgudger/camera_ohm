@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
+/// A widget that displays the application help page.
+///
+/// This page renders markdown text to explain the operational details of the
+/// "Enter Color Mode", "Enter Value Mode", and "Calculate Values Mode".
 class HelpPage extends StatefulWidget {
+  /// Creates a [HelpPage].
   const HelpPage({super.key});
   @override
   State<HelpPage> createState() => _HelpPage();
 }
+
+/// The state class for [HelpPage] that manages the markdown text display content.
 class _HelpPage extends State<HelpPage> {
-  final TextEditingController colorController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -19,12 +25,14 @@ class _HelpPage extends State<HelpPage> {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Container(
+        // Renders a clean structural frame container around the document pane
         decoration: BoxDecoration(
           border: Border.all(),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Markdown(
           data: helpText,
+          // Customizes the markdown layout typography to match the rest of the application
           styleSheet: MarkdownStyleSheet(
             p: const TextStyle(fontSize: 18),      // normal text
           )
@@ -32,7 +40,8 @@ class _HelpPage extends State<HelpPage> {
       ),
     );
   }
-  String helpText = '''In **Enter Color Mode** use the drop down boxes to enter the colors and calculate the resistor value. Start from the end farthest from the tolerance band.
+  /// The markdown-formatted raw text containing instructions for all application modes.
+  final String helpText = '''In **Enter Color Mode** use the drop down boxes to enter the colors and calculate the resistor value. Start from the end farthest from the tolerance band.
 
 In **Enter Value Mode** enter the resistor value in the text box to get the colors for that value.
 

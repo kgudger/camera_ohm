@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
+/// A page that converts user-entered resistor values into their corresponding color bands.
+/// 
+/// This widget provides a user interface with an input field for the resistor value,
+/// and displays both the calculated color bands and the closest standard EIA resistor value.
 class ValuePage extends StatefulWidget {
   const ValuePage({super.key});
   @override
   State<ValuePage> createState() => _ValuePage();
 }
+/// The state for [ValuePage] that handles user input and UI updates.
 class _ValuePage extends State<ValuePage> {
-  final TextEditingController _controller = TextEditingController();
+ // Controller to manage the lifecycle of the resistor value input text field.
+   final TextEditingController _controller = TextEditingController();
 
   String output1 = '';
   String output2 = '\n';
 
-  void updateOutputs(String input) {
+  /// Updates the displayed outputs based on the provided [input] string.
+  ///
+  /// This method invokes the [calcColors] logic to parse the text, retrieves a
+  /// tuple containing the parsed color bands and standard values, and calls
+  /// [setState] to refresh the user interface.
+   void updateOutputs(String input) {
     final (result, standard) = calcColors(input);
 
     setState(() {
@@ -20,8 +31,9 @@ class _ValuePage extends State<ValuePage> {
       output2 = standard;
     });
   }
-
-  @override
+  // Clean up the text controller when the widget is permanently removed 
+  // from the widget tree to avoid memory leaks.
+   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -29,8 +41,10 @@ class _ValuePage extends State<ValuePage> {
 
   @override
   Widget build(BuildContext context) {
+// returns the subpage for entering resistor values 
+// and showing their colors and the standard resistor value and colors
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBar( // title
         title: const Text('Resistor Value to Colors'),
       ),
       body: Padding(
@@ -38,23 +52,24 @@ class _ValuePage extends State<ValuePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
+            TextField( // title of the input text box
               controller: _controller,
               decoration: const InputDecoration(
                 labelText: 'Enter Resistor Value',
                 border: OutlineInputBorder(),
               ),
-              onSubmitted: updateOutputs,
+              onSubmitted: updateOutputs, // calls updateOutputs on enter
             ),
 
             const SizedBox(height: 8),
-            const Text(
+            const Text( // title of 1st output text box
               'Resistor Colors',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
+            // Read-only field displaying the calculated color bands.
             TextField(
               controller: TextEditingController(text: output1),
               readOnly: true,
@@ -64,13 +79,14 @@ class _ValuePage extends State<ValuePage> {
             ),
             const SizedBox(height: 8),
 
-            const Text(
-              'Closest Standard Resistor Value',
+            const Text( // title of the closest standard resistor value and colors
+              'Closest Standard Resistor Value', 
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
+            // Read-only field displaying the closest matching standard industry value.
             TextField(
               controller: TextEditingController(text: output2),
               readOnly: true,
@@ -86,36 +102,59 @@ class _ValuePage extends State<ValuePage> {
   }
 }
 
+/// Calculates both the requested resistor color bands and the nearest standard series equivalent.
+///
+/// String input is [input] with requested resistor value and tolerance
+/// Returns a tuple containing:
+/// 1. A comma-separated string representation of the requested color bands.
+/// 2. A string displaying formatted text comparing requested vs. standard values.
 (String, String) calcColors(String input) {
 
   final parsed = parseInput(input); 
   if (parsed == null) {
     return ('', '');
-  }
+  } // parsed is a class 'ParsedInput'with a number, text and a remainder
+
+  // 2. Select EIA series (E12 or E24) based on custom tolerance threshold
   List<double> rValues = e12;
   final tolerance = parseTolerance(parsed.remainder);
-  if (tolerance <= 0.05) {
-    rValues = e24;
+  if (tolerance <= 0.05) { // the remainder has the actual tolerance value
+    rValues = e24; // if less than 5% use the e24 entries
   }
-  final standardSize = roundToSeries(parsed.number, rValues);
+  // 3. Determine the closest commercially available preferred value
+  final standardSize = roundToSeries(parsed.number, rValues); // returns a ParsedInput
+  // 4. Compute original input color sequence
   final colors = computeBands(parsed);
+  // 5. Build and compute nearest industry standard replacement value sequence
   final newParsed = ParsedInput(standardSize,parsed.text,parsed.remainder);
-  final standardColors = computeBands(newParsed);
-  String result = colors.join(', ');
+  String result = colors.where((e) => e.isNotEmpty).join(', ');
   String result1 =   '''Requested: ${formatOhms(parsed)},
-Nearest: ${formatOhms(newParsed)}''';
-  String result2 = standardColors.join(', ');
+Nearest: ${formatOhms(newParsed)}'''; // includes newline in output
+  // 6. Check if requested input perfectly matches the commercial preferred standard
+  if (parsed.number == standardSize) {
+    // If identical, output only the requested summary string and omit the matching sequence
+    return (result, result1);
+  }
+// compute standard color sequence
+  final standardColors = computeBands(newParsed);
+  String result2 = standardColors.where((e) => e.isNotEmpty).join(', ');
   String resultAll = '''$result1
 $result2''';
-  return (result, resultAll);
-}
+  return (result, resultAll); // 1st text box, 2nd text bos
+} // requested value and nearest standard value.
 
+/// Computes the complete electronic color code band array for a given [p].
+///
+/// Iteratively appends standard identifier bands including primary significant
+/// digit sequences, multiplier shifts, and strict tolerance markers.
 List<String> computeBands(ParsedInput p) {
+// Normalizes raw tokenized input models into structured [ResistorValue] instances.
+// ResistorValue is class of List<int> digits and int exponent.
   final r = parseResistor(p);
 
   final bands = <String>[];
 
-  // 1. significant digits
+  // // 1. Convert digits to colors
   bands.addAll(digitsToColors(r.digits));
 
   // 2. multiplier
@@ -127,11 +166,13 @@ List<String> computeBands(ParsedInput p) {
   return bands;
 }
 
+/// Holds structurally isolated and tokenized parts of an original user raw input string.
 class ParsedInput {
-  final double number;
-  final String? text;
-  final String? remainder;
+  final double number; // raw number
+  final String? text;  // possible multiplier or ohms or tolerance
+  final String? remainder; // tolerance?
 
+  /// Creates a raw token container instance of [ParsedInput].
   ParsedInput(
     this.number,
     this.text,
@@ -139,7 +180,11 @@ class ParsedInput {
   );
 }
 
+/// Parses raw alphanumeric user inputs into a structured [ParsedInput] object.
+///
+/// Returns `null` if a structural numerical sequence cannot be safely matched or parsed.
 ParsedInput? parseInput(String input) {
+  // Capture leading integer or floating-point segments
   final numberMatch =
       RegExp(r'^\s*(\d+(?:\.\d+)?)').firstMatch(input);
 
@@ -147,16 +192,18 @@ ParsedInput? parseInput(String input) {
     return null;
   }
 
+  // Enforce consistent 3 significant figure truncation for accurate matching
   final number = roundToSigDigits(
     double.parse(numberMatch.group(1)!),
-    3,
-);
+    3, // 3 digits
+  );
   String remaining =
       input.substring(numberMatch.end).trim();
 
   String? text;
   String? remainder;
 
+  // Process residual tokens following the parsed numeric values
   if (remaining.isNotEmpty) {
     final tokens = remaining.split(RegExp(r'\s+'));
 
@@ -165,6 +212,7 @@ ParsedInput? parseInput(String input) {
       final first = tokens[0];
 
       // Unit/multiplier?
+      // Verify if token matches valid multi-lingual engineering ohm metrics
       if (RegExp(
         r'^(k|K|m|M|g|G|ohm|ohms|Ω|r|R)$',
       ).hasMatch(first)) {
@@ -176,6 +224,7 @@ ParsedInput? parseInput(String input) {
         }
       } else {
         // No unit found
+        // Fallback context: non-standard unit terms treated as raw secondary descriptors
         remainder = remaining;
       }
     }
@@ -188,6 +237,7 @@ ParsedInput? parseInput(String input) {
   );
 }
 
+/// Rounds a double [value] to a strict amount of [digits] precision.
 double roundToSigDigits(
   double value,
   int digits,
@@ -197,12 +247,14 @@ double roundToSigDigits(
   );
 }
 
+/// Maps integer values to standardized electronic color band strings.
 List<String> digitsToColors(List<int> digits) {
   return digits
       .map((d) => digitColors[d])
-      .toList();
+      .toList(); // const digitColors = <String>[] where index = value
 }
 
+/// Evaluates SI standard scale metric string tokens into numerical scale factor doubles.
 double unitMultiplier(String? unit) {
   if (unit == null) return 1.0;
 
@@ -219,6 +271,9 @@ double unitMultiplier(String? unit) {
   return 1.0;
 }
 
+/// Extract component tolerance percentage from [text] tokens.
+///
+/// Defaults to standard baseline broad 20% limits (`0.20`) if terms aren't recognized.
 double parseTolerance(String? text) {
   if (text == null) return 0.20; // default 20%
 
@@ -232,14 +287,16 @@ double parseTolerance(String? text) {
   return 0.20;
 }
 
+/// Encapsulates normalized mathematical base traits of an electronic resistor.
 class ResistorValue {
-  final List<int> digits;
-  final int exponent;
-  final double tolerance;
+  final List<int> digits; // all digits of initial double
+  final int exponent;     // integer exponent power of 10
+  final double tolerance; // tolerance percent (see parseTolerance)
 
   ResistorValue(this.digits, this.exponent, this.tolerance);
 }
 
+/// Normalizes raw tokenized input into [ResistorValue] instances.
 ResistorValue parseResistor(ParsedInput p) {
   final unitMult = unitMultiplier(p.text);
   final tolerance = parseTolerance(p.remainder);
@@ -259,25 +316,15 @@ ResistorValue parseResistor(ParsedInput p) {
     exponent--;
   }
 
+  // Converts mantissa into array of integers.
   final digits = extractDigits(value);
 
   return ResistorValue(digits, exponent, tolerance);
 }
 
-String normalizeDouble(double value) {
-  String s = value.toString();
-
-  // handle scientific notation
-  if (s.contains('e')) {
-    s = value.toStringAsFixed(10);
-    s = s.replaceFirst(RegExp(r'0+$'), '');
-    s = s.replaceFirst(RegExp(r'\.$'), '');
-  }
-
-  return s;
-}
-
+/// Converts mantissa into array segments of integers.
 List<int> extractDigits(double value) {
+  // Sanitizes numerical strings, scientific notation distortions and trailing zeros.
   final s = normalize(value);
 
   return s
@@ -287,20 +334,24 @@ List<int> extractDigits(double value) {
       .toList();
 }
 
+/// Sanitizes numerical strings, bypassing scientific notation distortions and trailing zeros.
 String normalize(double value) {
   String s = value.toString();
 
   // avoid scientific notation
+  // Flatten default floating-point exponent indicators to literal notation 
   if (s.contains('e')) {
     s = value.toStringAsFixed(12);
   }
 
+  // Strip trailing zeros and decimal point artifacts
   // trim trailing zeros
   s = s.replaceFirst(RegExp(r'\.?0+$'), '');
 
   return s;
 }
 
+/// Direct color code translation mapping array index directly to colors.
 const digitColors = <String>[
   "Black",   // 0
   "Brown",   // 1
@@ -314,6 +365,7 @@ const digitColors = <String>[
   "White",   // 9
 ];
 
+/// Resolves multipliers into equivalent color band labels.
 String exponentToColor(int exp) {
   const map = {
     -2: "Silver",
@@ -332,7 +384,11 @@ String exponentToColor(int exp) {
   return map[exp] ?? "Black";
 }
 
+/// Resolves percentage thresholds into component stripe labels.
 String toleranceToColor(double t) {
+  if (t <= 0.0005) return "Gray";
+  if (t <= 0.0025) return "Blue";
+  if (t <= 0.005) return "Green";
   if (t <= 0.01) return "Brown";
   if (t <= 0.02) return "Red";
   if (t <= 0.05) return "Gold";
@@ -341,7 +397,7 @@ String toleranceToColor(double t) {
   return "";
 }
 
-
+/// Snaps an ohm [value] to its closest target inside an explicit [series].
 double roundToSeries(
   double value,
   List<double> series,
@@ -376,34 +432,16 @@ double roundToSeries(
       bestError = error;
     }
   }
+  // Project mantissa back to base original
   final bestFinal = best * pow(10, exponent);
   final bestRound = double.parse(
-    bestFinal.toStringAsFixed(6),);
+    bestFinal.toStringAsFixed(6),); // only 3 digits max
   return (bestRound);
 }
-/*
-String nearestSeriesString(
-  ParsedInput p,
-  List<double> series,
-) {
-  final unitMultiplier = switch (p.text?.toLowerCase()) {
-    'k' => 1e3,
-    'm' => 1e6,
-    _ => 1.0,
-  };
 
-  final actualValue = p.number * unitMultiplier;
-
-  final result = roundToSeries(
-    actualValue,
-    series,
-  );
-
-  return 'Requested: ${formatOhms(result.requestedValue)}, '
-         'Nearest: ${formatOhms(result.closestValue)}';
-}
-*/
+/// Formats numeric values into human-readable text strings using SI labels.
 String formatOhms(ParsedInput p) {
+  // deals with null strings
   if (p.number >= 1e9) {
     return '${(p.number / 1e9).toStringAsFixed(2)}  ${p.text ?? ''} GΩ ${p.remainder ?? ''}';
   }
@@ -420,6 +458,7 @@ String formatOhms(ParsedInput p) {
 }
 
 /* Standard Resistor Values*/
+/// EIA E12 standard preferred resistor value steps.
 const e12 = [ // 10% tolerance
   1.0,
   1.2,
@@ -434,6 +473,8 @@ const e12 = [ // 10% tolerance
   6.8,
   8.2,
 ];
+
+/// EIA E24 standard preferred resistor value steps (5% or better).
 const e24 = [ // 5% tolerance (or less)
   1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0,
   2.2, 2.4, 2.7, 3.0, 3.3, 3.6, 3.9, 4.3,
