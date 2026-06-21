@@ -47,9 +47,9 @@ In **Enter Value Mode** enter the resistor value in the text box to get the colo
 
 Example: 1.2K 10% 
 
-The top text box shows the resistance value for the colors you entered. The bottom text box show the nearest standard resistor value to the one entered, including the color bands for the standard resistor value.
+The top text box shows the resistance value for the colors you entered.
 
-The bottom text area will show the nearest standard resistor value to your request.
+The bottom text box show the nearest standard resistor value to the one entered, including the color bands for the standard resistor value if different from what you entered.
 
 In **Calculate Values Mode** enter any 2 of Voltage, Current, Resistance, Watts on the left side and all 4 values are calculated and shown on the right side.
 
